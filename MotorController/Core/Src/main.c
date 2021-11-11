@@ -52,6 +52,7 @@ ADC_HandleTypeDef hadc1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
@@ -61,10 +62,13 @@ uint8_t message = 0;
 float T = 0.01;
 float refR = 0.0;
 float refL = 0.0;
-float errorR = 0.0;
-float errorL = 0.0;
+float lastErrorR = 0.0;
+float lastErrorL = 0.0;
 float voltageR = 0.0;
 float voltageL = 0.0;
+float batteryVoltage = 0.0;
+float voltageMeasScaling = (3.47/(4096))*(1+2.63); // Voltage divider ratio - Reference voltage was found experimentally
+
 
 int16_t fineadjustmentLeft = 0;
 int32_t revolutionLeft = 0;
@@ -104,6 +108,7 @@ static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -145,9 +150,13 @@ int main(void)
   MX_TIM6_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim6);
+	HAL_TIM_Base_Start_IT(&htim7);
 	HAL_UART_Receive_IT(&huart2, &message, 1);
+	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+
 
 	motor_init(&htim1, RIGHT_MOTOR_CHANNEL, LEFT_MOTOR_CHANNEL);
 	motor_start('R');
@@ -160,9 +169,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
-		HAL_ADC_Start(&hadc1);
-		uint32_t dev = HAL_ADC_GetValue(&hadc1);
-		HAL_ADC_Stop(&hadc1);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -219,7 +226,7 @@ void SystemClock_Config(void)
   PeriphClkInit.PLLSAI1.PLLSAI1N = 16;
   PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
   PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
-  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
+  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV8;
   PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
@@ -398,6 +405,44 @@ static void MX_TIM6_Init(void)
   /* USER CODE BEGIN TIM6_Init 2 */
 
   /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 65535;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 12207-1;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
 
 }
 
@@ -658,8 +703,9 @@ float nextVoltage(float lastErr, float lastVoltage) {
 }
 
 void controller() {
-	// Measure the angular velocity (feedback)
 	calcOutput();
+
+	// Measure the angular velocity (feedback)
 	float deltaRadsR = outputRight * 2 * M_PI - tempRadsR;
 	float deltaRadsL = outputLeft * 2 * M_PI - tempRadsL;
 	tempRadsR = outputRight * 2 * M_PI;
@@ -668,12 +714,27 @@ void controller() {
 	float angularVelL = deltaRadsL / T;
 
 	// Calculate next voltage according to the controller design
-	voltageR = nextVoltage(errorR, voltageR);
-	voltageL = nextVoltage(errorL, voltageL);
+	voltageR = nextVoltage(lastErrorR, voltageR);
+	voltageL = nextVoltage(lastErrorL, voltageL);
 
 	// Calculate current error to use for next iteration
-	errorR = calculateError(refR, angularVelR);
-	errorL = calculateError(refL, angularVelL);
+	lastErrorR = calculateError(refR, angularVelR);
+	lastErrorL = calculateError(refL, angularVelL);
+
+	float pwmR = voltageR / batteryVoltage;
+	float pwmL = voltageL / batteryVoltage;
+	if (pwmR > 1.0) pwmR = 1.0;
+	if (pwmL > 1.0) pwmL = 1.0;
+
+	motor_setPWM('R', pwmR);
+	motor_setPWM('L', pwmL);
+}
+
+void UpdateBatteryVoltage() {
+	HAL_ADC_Start(&hadc1); // Start ADC conversion
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // Wait for conversion to complete
+	uint32_t adc_val = HAL_ADC_GetValue(&hadc1); // Get the ADC value
+	batteryVoltage = adc_val*voltageMeasScaling;
 }
 
 /* USER CODE END 4 */

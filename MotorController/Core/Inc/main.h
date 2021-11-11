@@ -38,6 +38,28 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
+typedef struct MotorEncoder {
+	int32_t lastTicks; 		// Previously
+	float lastAngle;
+	int16_t fineAdjustment;
+	int32_t revolutions;
+	float output;
+};
+
+typedef struct Motor {
+	char name; // 'R' or 'L'
+	uint8_t direction; // 1 or 0
+	float dutyCycle;
+};
+
+typedef struct MotorController {
+	float reference;
+	float lastError;
+	float voltage;
+	Motor motor;
+	MotorEncoder Encoder;
+};
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -57,9 +79,13 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+void UpdateBatteryVoltage();
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BatteryVoltage_Pin GPIO_PIN_3
+#define BatteryVoltage_GPIO_Port GPIOA
 #define Motor_Left_clock_Pin GPIO_PIN_5
 #define Motor_Left_clock_GPIO_Port GPIOA
 #define Motor_Left_clock_EXTI_IRQn EXTI9_5_IRQn
