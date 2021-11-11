@@ -60,18 +60,30 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define DIR_R1_Pin GPIO_PIN_0
-#define DIR_R1_GPIO_Port GPIOA
-#define DIR_R2_Pin GPIO_PIN_1
-#define DIR_R2_GPIO_Port GPIOA
-#define DIR_L1_Pin GPIO_PIN_2
+#define Motor_Left_clock_Pin GPIO_PIN_5
+#define Motor_Left_clock_GPIO_Port GPIOA
+#define Motor_Left_clock_EXTI_IRQn EXTI9_5_IRQn
+#define DIR_L1_Pin GPIO_PIN_6
 #define DIR_L1_GPIO_Port GPIOA
-#define DIR_L2_Pin GPIO_PIN_3
+#define DIR_L2_Pin GPIO_PIN_7
 #define DIR_L2_GPIO_Port GPIOA
+#define motor_Right_clock_Pin GPIO_PIN_0
+#define motor_Right_clock_GPIO_Port GPIOB
+#define motor_Right_clock_EXTI_IRQn EXTI0_IRQn
+#define Motor_left_counterclock_Pin GPIO_PIN_1
+#define Motor_left_counterclock_GPIO_Port GPIOB
+#define Motor_left_counterclock_EXTI_IRQn EXTI1_IRQn
 #define PWM_R_Pin GPIO_PIN_8
 #define PWM_R_GPIO_Port GPIOA
 #define PWM_L_Pin GPIO_PIN_9
 #define PWM_L_GPIO_Port GPIOA
+#define Motor_counterclock_right_Pin GPIO_PIN_4
+#define Motor_counterclock_right_GPIO_Port GPIOB
+#define Motor_counterclock_right_EXTI_IRQn EXTI4_IRQn
+#define DIR_R1_Pin GPIO_PIN_6
+#define DIR_R1_GPIO_Port GPIOB
+#define DIR_R2_Pin GPIO_PIN_7
+#define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
