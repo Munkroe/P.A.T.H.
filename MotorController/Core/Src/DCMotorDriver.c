@@ -4,7 +4,7 @@ TIM_HandleTypeDef *htim;
 uint32_t right_channel = 0;
 uint32_t left_channel = 0;
 
-void motor_init(TIM_HandleTypeDef *htimer, uint32_t r_channel, uint32_t l_channel) {
+void motor_initi(TIM_HandleTypeDef *htimer, uint32_t r_channel, uint32_t l_channel) {
 	htim = htimer;
 	right_channel = r_channel;
 	left_channel = l_channel;

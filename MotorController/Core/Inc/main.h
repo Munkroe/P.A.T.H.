@@ -44,26 +44,28 @@ typedef struct MotorEncoder {
 	int16_t fineAdjustment;
 	int32_t revolutions;
 	float output;
-};
+} MotorEncoder;
 
 typedef struct Motor {
 	char name; // 'R' or 'L'
 	uint8_t direction; // 1 or 0
 	float dutyCycle;
-};
+} Motor;
 
 typedef struct MotorController {
 	float reference;
+	float measurement;
 	float lastError;
 	float voltage;
-	Motor motor;
-	MotorEncoder Encoder;
-};
+	Motor *motor;
+	MotorEncoder *Encoder;
+} MotorController;
 
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
+
 
 /* USER CODE END EC */
 
@@ -103,6 +105,12 @@ void UpdateBatteryVoltage();
 #define PWM_R_GPIO_Port GPIOA
 #define PWM_L_Pin GPIO_PIN_9
 #define PWM_L_GPIO_Port GPIOA
+#define orientation_counterclock_Pin GPIO_PIN_11
+#define orientation_counterclock_GPIO_Port GPIOA
+#define orientation_counterclock_EXTI_IRQn EXTI15_10_IRQn
+#define orientation_clock_Pin GPIO_PIN_3
+#define orientation_clock_GPIO_Port GPIOB
+#define orientation_clock_EXTI_IRQn EXTI3_IRQn
 #define Motor_counterclock_right_Pin GPIO_PIN_4
 #define Motor_counterclock_right_GPIO_Port GPIOB
 #define Motor_counterclock_right_EXTI_IRQn EXTI4_IRQn

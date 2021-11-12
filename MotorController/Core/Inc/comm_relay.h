@@ -23,8 +23,6 @@ int to_frame(char * frame, uint8_t *revolutionAddr, uint8_t *ID);
 
 int is_special_character(char c);
 
-const char * replace_escape(char c);
-
 int from_frame(const char * frame, size_t len, struct CAN_QUEUE_DATA * package);
 
 

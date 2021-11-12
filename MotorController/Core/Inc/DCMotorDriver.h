@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-void motor_init(TIM_HandleTypeDef *htimer, uint32_t r_channel, uint32_t l_channel);
+void motor_initi(TIM_HandleTypeDef *htimer, uint32_t r_channel, uint32_t l_channel);
 
 void motor_setPWM(char wheel, float dutycycle);
 
