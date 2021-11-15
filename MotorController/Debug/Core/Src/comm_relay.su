@@ -1,2 +1,3 @@
-comm_relay.c:11:5:to_frame	40	static
-comm_relay.c:43:5:is_special_character	16	static
+comm_relay.c:12:5:to_frame	40	static
+comm_relay.c:44:5:is_special_character	16	static
+comm_relay.c:49:5:from_frame	40	static

@@ -17,13 +17,12 @@
 //#define PACKAGE_SIZE 25
 #define FRAME_SIZE 51
 
-#define COMM_MAX_FRAME_SIZE 20
+#define COMM_MAX_FRAME_SIZE 22
 
 int to_frame(char * frame, uint8_t *revolutionAddr, uint8_t *ID);
 
 int is_special_character(char c);
 
-int from_frame(const char * frame, size_t len, struct CAN_QUEUE_DATA * package);
-
+int from_frame(const char * frame, size_t len, char * destination, uint32_t *outputLen);
 
 #endif /* SRC_COMM_RELAY_H_ */

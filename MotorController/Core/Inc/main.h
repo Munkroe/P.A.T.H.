@@ -54,7 +54,7 @@ typedef struct Motor {
 
 typedef struct MotorController {
 	float reference;
-	float measurement;
+	float measAngVel;
 	float lastError;
 	float voltage;
 	Motor *motor;
@@ -105,6 +105,8 @@ void UpdateBatteryVoltage();
 #define PWM_R_GPIO_Port GPIOA
 #define PWM_L_Pin GPIO_PIN_9
 #define PWM_L_GPIO_Port GPIOA
+#define testLED_Pin GPIO_PIN_10
+#define testLED_GPIO_Port GPIOA
 #define orientation_counterclock_Pin GPIO_PIN_11
 #define orientation_counterclock_GPIO_Port GPIOA
 #define orientation_counterclock_EXTI_IRQn EXTI15_10_IRQn
