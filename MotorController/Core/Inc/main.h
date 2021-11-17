@@ -48,7 +48,7 @@ typedef struct MotorEncoder {
 
 typedef struct Motor {
 	char name; // 'R' or 'L'
-	uint8_t direction; // 1 or 0
+	int8_t direction; // -1 or 1
 	float dutyCycle;
 } Motor;
 

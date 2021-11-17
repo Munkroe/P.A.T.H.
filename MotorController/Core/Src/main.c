@@ -588,7 +588,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : Motor_Left_clock_Pin orientation_counterclock_Pin */
   GPIO_InitStruct.Pin = Motor_Left_clock_Pin|orientation_counterclock_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -601,7 +601,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : motor_Right_clock_Pin Motor_left_counterclock_Pin orientation_clock_Pin Motor_counterclock_right_Pin */
   GPIO_InitStruct.Pin = motor_Right_clock_Pin|Motor_left_counterclock_Pin|orientation_clock_Pin|Motor_counterclock_right_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -808,7 +808,7 @@ void resetEncoder(MotorController *c) {
 }
 
 void clockcheckRight() {
-	if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4)) {
+	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin) == HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port, Motor_counterclock_right_Pin)) {
 		controllerR.motor->direction = -1;
 		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
 	} else {
@@ -820,7 +820,7 @@ void clockcheckRight() {
 }
 
 void counterclockcheckRight() {
-	if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4)) {
+	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin) == HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port, Motor_counterclock_right_Pin)) {
 		controllerR.motor->direction = 1;
 		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
 	} else {
@@ -832,24 +832,24 @@ void counterclockcheckRight() {
 }
 
 void clockcheckLeft() {
-	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)) {
+	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin) == HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port, Motor_left_counterclock_Pin)) {
 		controllerL.motor->direction = -1;
-		controllerL.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
 	} else {
 		controllerL.motor->direction = 1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
 	}
 
 	checkRevolutions(&controllerL);
 }
 
 void counterclockcheckLeft() {
-	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0)) {
+	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin) == HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port, Motor_left_counterclock_Pin)) {
 		controllerL.motor->direction = 1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
 	} else {
 		controllerL.motor->direction = -1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
 	}
 
 	checkRevolutions(&controllerL);
@@ -884,7 +884,7 @@ void checkRevolutions(MotorController *c) {
 }
 
 void calcOutput(MotorEncoder *e) {
-	e->output = e->revolutions + (e->fineAdjustment / TOTAL_WHEEL_TICKS);
+	e->output = e->revolutions + ((float)e->fineAdjustment / TOTAL_WHEEL_TICKS);
 }
 
 void calculateError(MotorController *c) {
