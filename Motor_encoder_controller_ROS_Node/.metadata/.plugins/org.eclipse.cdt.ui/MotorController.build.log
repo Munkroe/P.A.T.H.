@@ -1,0 +1,186 @@
+11:40:17 **** Incremental Build of configuration Debug for project MotorController ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L432xx -c -I../Drivers/CMSIS/Include -I../Core/Inc -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/stm32l4xx_it.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L432xx -c -I../Drivers/CMSIS/Include -I../Core/Inc -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/stm32l4xx_it.d" -MT"Core/Src/stm32l4xx_it.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/stm32l4xx_it.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:146:2: warning: implicit declaration of function 'motor_init'; did you mean 'motor_initi'? [-Wimplicit-function-declaration]
+  146 |  motor_init(&motorR, 'R');
+      |  ^~~~~~~~~~
+      |  motor_initi
+../Core/Src/stm32l4xx_it.c: In function 'EXTI0_IRQHandler':
+../Core/Src/stm32l4xx_it.c:214:2: warning: implicit declaration of function 'clockcheckRight' [-Wimplicit-function-declaration]
+  214 |  clockcheckRight();
+      |  ^~~~~~~~~~~~~~~
+../Core/Src/main.c:149:2: warning: implicit declaration of function 'motorEncoder_init' [-Wimplicit-function-declaration]
+  149 |  motorEncoder_init(&encoderR);
+      |  ^~~~~~~~~~~~~~~~~
+../Core/Src/stm32l4xx_it.c: In function 'EXTI1_IRQHandler':
+../Core/Src/stm32l4xx_it.c:228:3: warning: implicit declaration of function 'counterclockcheckLeft' [-Wimplicit-function-declaration]
+  228 |   counterclockcheckLeft();
+      |   ^~~~~~~~~~~~~~~~~~~~~
+../Core/Src/stm32l4xx_it.c: In function 'EXTI3_IRQHandler':
+../Core/Src/stm32l4xx_it.c:242:2: warning: implicit declaration of function 'checkOrientClock' [-Wimplicit-function-declaration]
+  242 |  checkOrientClock();
+      |  ^~~~~~~~~~~~~~~~
+../Core/Src/main.c:152:2: warning: implicit declaration of function 'motorController_init' [-Wimplicit-function-declaration]
+  152 |  motorController_init(&controllerR, &motorR, &encoderR);
+      |  ^~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:174:32: warning: pointer targets in passing argument 2 of 'HAL_UART_Receive_DMA' differ in signedness [-Wpointer-sign]
+  174 |  HAL_UART_Receive_DMA(&huart2, uart_in, UART_IN_BUF_SIZE);
+      |                                ^~~~~~~
+      |                                |
+      |                                char *
+In file included from ../Core/Inc/stm32l4xx_hal_conf.h:449,
+                 from ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:30,
+                 from ../Core/Inc/main.h:31,
+                 from ../Core/Src/main.c:21:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h:1684:76: note: expected 'uint8_t *' {aka 'unsigned char *'} but argument is of type 'char *'
+ 1684 | HAL_StatusTypeDef HAL_UART_Receive_DMA(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size);
+      |                                                                   ~~~~~~~~~^~~~~
+../Core/Src/main.c:193:3: warning: implicit declaration of function 'updateDutyCycle' [-Wimplicit-function-declaration]
+  193 |   updateDutyCycle(&controllerR);
+      |   ^~~~~~~~~~~~~~~
+../Core/Src/stm32l4xx_it.c: In function 'EXTI4_IRQHandler':
+../Core/Src/stm32l4xx_it.c:256:2: warning: implicit declaration of function 'counterclockcheckRight' [-Wimplicit-function-declaration]
+  256 |  counterclockcheckRight();
+      |  ^~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:196:3: warning: implicit declaration of function 'setDutyCycle' [-Wimplicit-function-declaration]
+  196 |   setDutyCycle(&controllerR);
+      |   ^~~~~~~~~~~~
+../Core/Src/main.c: At top level:
+../Core/Src/main.c:627:6: warning: conflicting types for 'motor_init'
+  627 | void motor_init(Motor *m, char name) {
+      |      ^~~~~~~~~~
+../Core/Src/main.c:146:2: note: previous implicit declaration of 'motor_init' was here
+  146 |  motor_init(&motorR, 'R');
+      |  ^~~~~~~~~~
+../Core/Src/main.c:633:6: warning: conflicting types for 'motorEncoder_init'
+  633 | void motorEncoder_init(MotorEncoder *e) {
+      |      ^~~~~~~~~~~~~~~~~
+../Core/Src/main.c:149:2: note: previous implicit declaration of 'motorEncoder_init' was here
+  149 |  motorEncoder_init(&encoderR);
+      |  ^~~~~~~~~~~~~~~~~
+../Core/Src/main.c:641:6: warning: conflicting types for 'motorController_init'
+  641 | void motorController_init(MotorController *c, Motor *m, MotorEncoder *e) {
+      |      ^~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:152:2: note: previous implicit declaration of 'motorController_init' was here
+  152 |  motorController_init(&controllerR, &motorR, &encoderR);
+      |  ^~~~~~~~~~~~~~~~~~~~
+../Core/Src/stm32l4xx_it.c: In function 'EXTI9_5_IRQHandler':
+../Core/Src/stm32l4xx_it.c:284:4: warning: implicit declaration of function 'clockcheckLeft' [-Wimplicit-function-declaration]
+  284 |    clockcheckLeft();
+      |    ^~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'updatePositionsAndVelocities':
+../Core/Src/main.c:746:2: warning: implicit declaration of function 'sendPositionAndVelocity'; did you mean 'calcPositionAndVelocity'? [-Wimplicit-function-declaration]
+  746 |  sendPositionAndVelocity();
+      |  ^~~~~~~~~~~~~~~~~~~~~~~
+      |  calcPositionAndVelocity
+../Core/Src/main.c:749:2: warning: implicit declaration of function 'calcOrientOutput' [-Wimplicit-function-declaration]
+  749 |  calcOrientOutput();
+      |  ^~~~~~~~~~~~~~~~
+../Core/Src/stm32l4xx_it.c: In function 'EXTI15_10_IRQHandler':
+../Core/Src/stm32l4xx_it.c:313:2: warning: implicit declaration of function 'checkOrientCounterClock' [-Wimplicit-function-declaration]
+  313 |  checkOrientCounterClock();
+      |  ^~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:750:2: warning: implicit declaration of function 'sendOrientData' [-Wimplicit-function-declaration]
+  750 |  sendOrientData();
+      |  ^~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'packThe6Floats':
+../Core/Src/main.c:754:21: warning: initialization of 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  754 |  uint8_t *pointer = &posX;
+      |                     ^
+../Core/Src/main.c:759:10: warning: assignment to 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  759 |  pointer = &posY;
+      |          ^
+../Core/Src/main.c:763:10: warning: assignment to 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  763 |  pointer = &posPhi;
+      |          ^
+../Core/Src/main.c:767:10: warning: assignment to 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  767 |  pointer = &velX;
+      |          ^
+../Core/Src/main.c:771:10: warning: assignment to 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  771 |  pointer = &velY;
+      |          ^
+../Core/Src/main.c:775:10: warning: assignment to 'uint8_t *' {aka 'unsigned char *'} from incompatible pointer type 'float *' [-Wincompatible-pointer-types]
+  775 |  pointer = &velPhi;
+      |          ^
+../Core/Src/main.c: At top level:
+../Core/Src/main.c:781:6: warning: conflicting types for 'sendPositionAndVelocity'
+  781 | void sendPositionAndVelocity() {
+      |      ^~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:746:2: note: previous implicit declaration of 'sendPositionAndVelocity' was here
+  746 |  sendPositionAndVelocity();
+      |  ^~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'sendPositionAndVelocity':
+../Core/Src/main.c:789:39: warning: passing argument 3 of 'to_frame' makes pointer from integer without a cast [-Wint-conversion]
+  789 |   to_frame(packedMotorData, position, 3);
+      |                                       ^
+      |                                       |
+      |                                       int
+In file included from ../Core/Src/main.c:26:
+../Core/Inc/comm_relay.h:22:62: note: expected 'uint8_t *' {aka 'unsigned char *'} but argument is of type 'int'
+   22 | int to_frame(char * frame, uint8_t *revolutionAddr, uint8_t *ID);
+      |                                                     ~~~~~~~~~^~
+../Core/Src/main.c:790:30: warning: pointer targets in passing argument 2 of 'HAL_UART_Transmit' differ in signedness [-Wpointer-sign]
+  790 |   HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData), HAL_MAX_DELAY);
+      |                              ^~~~~~~~~~~~~~~
+      |                              |
+      |                              char *
+In file included from ../Core/Inc/stm32l4xx_hal_conf.h:449,
+                 from ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:30,
+                 from ../Core/Inc/main.h:31,
+                 from ../Core/Src/main.c:21:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h:1679:73: note: expected 'uint8_t *' {aka 'unsigned char *'} but argument is of type 'char *'
+ 1679 | HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout);
+      |                                                                ~~~~~~~~~^~~~~
+../Core/Src/stm32l4xx_it.c: In function 'TIM6_DAC_IRQHandler':
+../Core/Src/stm32l4xx_it.c:327:2: warning: implicit declaration of function 'updatePositionsAndVelocities' [-Wimplicit-function-declaration]
+  327 |  updatePositionsAndVelocities();
+      |  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c: In function 'clockcheckRight':
+../Core/Src/main.c:803:41: warning: implicit declaration of function 'abs' [-Wimplicit-function-declaration]
+  803 |   controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
+      |                                         ^~~
+../Core/Src/main.c:809:2: warning: implicit declaration of function 'checkRevolutions' [-Wimplicit-function-declaration]
+  809 |  checkRevolutions(&controllerR);
+      |  ^~~~~~~~~~~~~~~~
+../Core/Src/main.c: At top level:
+../Core/Src/main.c:848:6: warning: conflicting types for 'checkRevolutions'
+  848 | void checkRevolutions(MotorController *c) {
+      |      ^~~~~~~~~~~~~~~~
+../Core/Src/main.c:809:2: note: previous implicit declaration of 'checkRevolutions' was here
+  809 |  checkRevolutions(&controllerR);
+      |  ^~~~~~~~~~~~~~~~
+../Core/Src/main.c:894:6: warning: conflicting types for 'updateDutyCycle'
+  894 | void updateDutyCycle(MotorController *c) {
+      |      ^~~~~~~~~~~~~~~
+../Core/Src/main.c:193:3: note: previous implicit declaration of 'updateDutyCycle' was here
+  193 |   updateDutyCycle(&controllerR);
+      |   ^~~~~~~~~~~~~~~
+../Core/Src/main.c:901:6: warning: conflicting types for 'setDutyCycle'
+  901 | void setDutyCycle(MotorController *c) {
+      |      ^~~~~~~~~~~~
+../Core/Src/main.c:196:3: note: previous implicit declaration of 'setDutyCycle' was here
+  196 |   setDutyCycle(&controllerR);
+      |   ^~~~~~~~~~~~
+../Core/Src/main.c: In function 'uart_in_read':
+../Core/Src/main.c:691:8: warning: 'dataLength' may be used uninitialized in this function [-Wmaybe-uninitialized]
+  691 |    if (from_frame(frame, frameLength, data, dataLength) == 1) {
+      |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "MotorController.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\Rasmu\OneDrive\Billeder\Dokumenter\GitHub\MotorController\STM32L432KCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="MotorController.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: MotorController.elf
+ 
+arm-none-eabi-size   MotorController.elf 
+arm-none-eabi-objdump -h -S  MotorController.elf  > "MotorController.list"
+arm-none-eabi-objcopy  -O binary  MotorController.elf  "MotorController.bin"
+   text	   data	    bss	    dec	    hex	filename
+  34928	     28	   2756	  37712	   9350	MotorController.elf
+Finished building: default.size.stdout
+ 
+Finished building: MotorController.bin
+ 
+Finished building: MotorController.list
+ 
+
+11:40:18 Build Finished. 0 errors, 34 warnings. (took 1s.449ms)
+

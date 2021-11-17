@@ -1,17 +1,17 @@
 #include "orientation.h"
 
 uint8_t directionOrient = 0;
-uint16_t orientIncrement = 0;
-float orientAngle = 0;
+int32_t orientIncrement = 0;
+float orientAngle = 0.0;
 uint8_t spamCheckDirOrient = 0;
 float spamCheckOrientAngle = 0.0;
 char packedOrientData[50] = { 0 };
 uint8_t angularPosition[5] = { 0 };
-float angularResolution = 360.0/TOOTHRESOLUTION;
+float angularResolution = 360.0/TOPENCODERRESOLUTION;
 
 
 void calcOrientOutput() {
-	 orientAngle = (float) orientIncrement * angularResolution; // Antallet af målte inkrementer ganges med hvor stor en grad hver inkrement er
+	 orientAngle = (orientIncrement % TOPENCODERRESOLUTION) * angularResolution; // Antallet af målte inkrementer ganges med hvor stor en grad hver inkrement er
  }
 
 void packOrient() {
@@ -24,41 +24,41 @@ void packOrient() {
 	}
 }
 
-void checkOrientClock() {
-	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)
-				== HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11)) {
+void checkOrientClock() { //A
+	if (HAL_GPIO_ReadPin(orientation_clock_GPIO_Port, orientation_clock_Pin)
+				== HAL_GPIO_ReadPin(orientation_counterclock_GPIO_Port, orientation_counterclock_Pin)) {
 			directionOrient = -1;
-			orientIncrement = abs((orientIncrement + directionOrient) % TOOTHRESOLUTION);
+			orientIncrement--;//abs((orientIncrement + directionOrient) % TOOTHRESOLUTION);
 		} else {
 
 			directionOrient = 1;
-			orientIncrement = abs((orientIncrement + directionOrient) % (TOOTHRESOLUTION + 1));
+			orientIncrement++; //= abs((orientIncrement + directionOrient) % (TOOTHRESOLUTION + 1));
 		}
 
-		checkRevolutionsOrient();
+		//checkRevolutionsOrient();
 }
 
-void checkOrientCounterClock() {
-	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)
-				== HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11)) {
+void checkOrientCounterClock() { //B
+	if (HAL_GPIO_ReadPin(orientation_counterclock_GPIO_Port, orientation_counterclock_Pin)
+				== HAL_GPIO_ReadPin(orientation_clock_GPIO_Port, orientation_clock_Pin)) {
 			directionOrient = 1;
-			orientIncrement = abs((orientIncrement + directionOrient) % TOOTHRESOLUTION);
+			orientIncrement++; //= abs((orientIncrement + directionOrient) % TOOTHRESOLUTION);
 		} else {
 			directionOrient = -1;
-			orientIncrement = abs((orientIncrement + directionOrient) % (TOOTHRESOLUTION + 1));
+			orientIncrement--; //= abs((orientIncrement + directionOrient) % (TOOTHRESOLUTION + 1));
 		}
 
-		checkRevolutionsOrient();
+		//checkRevolutionsOrient();
 }
 
-void checkRevolutionsOrient() {
-	if (orientIncrement == 0 && directionOrient == 1) {
-		orientIncrement = 1;
-	}
-	else if (orientIncrement == 0 && directionOrient == -1){
-		orientIncrement = TOOTHRESOLUTION;
-	}
-}
+//void checkRevolutionsOrient() {
+//	if (orientIncrement == 0 && directionOrient == 1) {
+//		orientIncrement = 1;
+//	}
+//	else if (orientIncrement == 0 && directionOrient == -1){
+//		orientIncrement = TOOTHRESOLUTION;
+//	}
+//}
 
 void sendOrientData() {
 	if (spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle) {

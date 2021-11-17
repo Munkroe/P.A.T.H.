@@ -1,0 +1,19 @@
+!SESSION 2021-11-17 10:05:20.746 -----------------------------------------------
+eclipse.buildId=Version 1.7.0
+java.version=11.0.10
+java.vendor=AdoptOpenJDK
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=da_DK
+Framework arguments:  C:\Users\Rasmu\OneDrive\Billeder\Dokumenter\GitHub\MotorController\.project
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 C:\Users\Rasmu\OneDrive\Billeder\Dokumenter\GitHub\MotorController\.project
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2021-11-17 10:05:34.445
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2021-11-17 10:05:34.576
+!MESSAGE Log4j initialized with config file C:\Users\Rasmu\OneDrive\Billeder\Dokumenter\GitHub\Motor_encoder_controller_ROS_Node\.metadata\.log4j.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2021-11-17 10:05:43.426
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2021-11-17 10:09:39.979
+!MESSAGE Indexed 'MotorController' (30 sources, 126 headers) in 6,96 sec: 14.139 declarations; 76.358 references; 8 unresolved inclusions; 781 syntax errors; 2.093 unresolved names (2,3 %)

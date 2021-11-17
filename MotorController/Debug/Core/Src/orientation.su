@@ -2,5 +2,4 @@ orientation.c:13:6:calcOrientOutput	4	static
 orientation.c:17:6:packOrient	16	static
 orientation.c:27:6:checkOrientClock	16	static
 orientation.c:41:6:checkOrientCounterClock	16	static
-orientation.c:54:6:checkRevolutionsOrient	4	static
 orientation.c:63:6:sendOrientData	8	static
