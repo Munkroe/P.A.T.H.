@@ -170,32 +170,38 @@ int main(void) {
 	MX_TIM7_Init();
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
+
+	positionCalculationPeriod = ((htim6.Instance->ARR + 1)
+				/ (80000000.0 / (htim6.Instance->PSC + 1)));
+	controllerPeriod = ((htim2.Instance->ARR + 1)
+				/ (80000000.0 / (htim2.Instance->PSC + 1)));
+
+	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+
 	HAL_UART_Receive_DMA(&huart2, uart_in, UART_IN_BUF_SIZE);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim7);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
-	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 
-	positionCalculationPeriod = ((htim6.Instance->ARR + 1)
-			/ (80000000.0 / (htim6.Instance->PSC + 1)));
-	controllerPeriod = ((htim2.Instance->ARR + 1)
-			/ (80000000.0 / (htim2.Instance->PSC + 1)));
+
 
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+
 	while (1) {
 
-		controllerR.voltage = 2.0;
-		controllerL.voltage = 2.0;
+		//controller(&controllerR);
 
-		updateDutyCycle(&controllerR);
-		updateDutyCycle(&controllerL);
+		//updateDutyCycle(&controllerR);
+		//updateDutyCycle(&controllerL);
 
-		setDutyCycle(&controllerR);
-		setDutyCycle(&controllerL);
+		//setDutyCycle(&controllerR);
+		//setDutyCycle(&controllerL);
 
 		/* USER CODE END WHILE */
 
@@ -913,13 +919,18 @@ void updateAngularVelocity(MotorController *c) {
 }
 
 void updateDutyCycle(MotorController *c) {
-	if (c->voltage >= 0) {
+	if (c->voltage > 0) {
 		c->motor->direction = 1;
-	} else {
+	} else if (c->voltage < 0){
 		c->motor->direction = -1;
+	} else {
+		c->motor->dutyCycle = 0;
+		return;
 	}
-	float pwm = abs(c->voltage) / batteryVoltage;
 
+	float pwm = c->voltage / batteryVoltage;
+
+	if (pwm < 0) pwm = -pwm;
 	if (pwm > 1.0)
 		pwm = 1.0;
 	c->motor->dutyCycle = pwm;
