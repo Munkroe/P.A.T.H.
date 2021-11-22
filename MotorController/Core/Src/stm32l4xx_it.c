@@ -43,6 +43,8 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
+extern int uart_dma_laps_ahead;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -210,7 +212,7 @@ void EXTI1_IRQHandler(void) {
 	/* USER CODE END EXTI1_IRQn 0 */
 	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
 	/* USER CODE BEGIN EXTI1_IRQn 1 */
-	counterclockcheckLeft();
+	clockcheckLeft();
 	/* USER CODE END EXTI1_IRQn 1 */
 }
 
@@ -249,7 +251,7 @@ void DMA1_Channel6_IRQHandler(void) {
 	/* USER CODE END DMA1_Channel6_IRQn 0 */
 	HAL_DMA_IRQHandler(&hdma_usart2_rx);
 	/* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
-
+	uart_dma_laps_ahead++;
 	/* USER CODE END DMA1_Channel6_IRQn 1 */
 }
 
@@ -262,7 +264,7 @@ void EXTI9_5_IRQHandler(void) {
 	/* USER CODE END EXTI9_5_IRQn 0 */
 	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5);
 	/* USER CODE BEGIN EXTI9_5_IRQn 1 */
-	clockcheckLeft();
+	counterclockcheckLeft();
 
 	/* USER CODE END EXTI9_5_IRQn 1 */
 }

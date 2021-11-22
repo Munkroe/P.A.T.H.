@@ -82,6 +82,9 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 
 void UpdateBatteryVoltage();
+void uart_in_read(void (*formattingFunc)(char*, uint32_t));
+void referenceFormatting(char*, uint32_t);
+
 
 /* USER CODE END EFP */
 
