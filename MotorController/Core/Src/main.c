@@ -38,13 +38,15 @@
 
 #define RIGHT_MOTOR_CHANNEL TIM_CHANNEL_1
 #define LEFT_MOTOR_CHANNEL TIM_CHANNEL_2
-#define WHEELDIA 0.08
-#define DISBETWHEEL 0.38
+#define WHEELDIA 0.0813
+#define DISBETWHEEL 0.37
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
+#define UART_ID_MOTOR 2
+
 
 /* USER CODE END PD */
 
@@ -765,7 +767,7 @@ void sendPositionAndVelocity() {
 		packThe6Floats();
 		memset(packedMotorData, 0, sizeof(packedMotorData));
 
-		to_frame(packedMotorData, position, 3);
+		to_frame(packedMotorData, position, UART_ID_MOTOR);
 		HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
 		HAL_MAX_DELAY);
 	}

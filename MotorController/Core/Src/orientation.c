@@ -67,7 +67,7 @@ void sendOrientData() {
 		packOrient();
 		memset(packedOrientData, 0, sizeof(packedOrientData));
 
-		to_frame(packedOrientData, angularPosition, ORIENTID);
+		to_frame(packedOrientData, angularPosition, UART_ID_ORIENTATION);
 		HAL_UART_Transmit(&huart2, packedOrientData, sizeof(packedOrientData), HAL_MAX_DELAY);
 	}
 }
