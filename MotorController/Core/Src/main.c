@@ -756,12 +756,12 @@ void updatePositionsAndVelocities() {
 }
 
 void packThe6Floats() {
-	uint8_t *pointer = &posX;
+
+	uint8_t *pointer = &controllerL.Encoder->output;
 	for (int i = 0; i < 4; i++) {
 		position[i] = *(pointer + i);
 	}
-
-	pointer = &posY;
+	pointer = &controllerR.Encoder->output;
 	for (int k = 4; k < 8; k++) {
 		position[k] = *(pointer + k - 4);
 	}
