@@ -17,6 +17,7 @@ extern UART_HandleTypeDef huart2;
 #define TOPENCODERRESOLUTION 736 // 192 teeth, each photointerruptor measures both falling and rising (times 2), "2*" because of two photointerruptors measuring with the same resolution
 #define UART_ID_ORIENTATION 3
 
+void orientation_reset();
 void checkOrientClock();
 void calcOrientOutput();
 void checkOrientCounterClock();

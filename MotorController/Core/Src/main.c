@@ -22,10 +22,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "DCMotorDriver.h"
 #include "comm_relay.h"
 #include "math.h"
 #include "stdbool.h"
+#include "orientation.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,15 +38,14 @@
 
 #define RIGHT_MOTOR_CHANNEL TIM_CHANNEL_1
 #define LEFT_MOTOR_CHANNEL TIM_CHANNEL_2
-#define WHEELDIA 0.0813
-#define DISBETWHEEL 0.37
+#define WHEELDIA 0.085
+#define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
 #define UART_ID_MOTOR 2
-
 
 /* USER CODE END PD */
 
@@ -126,6 +125,10 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 void packThe6Floats();
+void uart_in_read(void (*handleFunc)(char*, uint32_t));
+void uart_in_handle(char*, uint32_t);
+int8_t uart_in_handle_reset(char*, uint32_t);
+int8_t uart_in_handle_reference(char*, uint32_t);
 
 /* USER CODE END PFP */
 
@@ -150,16 +153,6 @@ int main(void) {
 
 	/* USER CODE BEGIN Init */
 
-	// Motor Initialization
-	motor_init(&motorR, 'R');
-	motor_init(&motorL, 'L');
-
-	motorEncoder_init(&encoderR);
-	motorEncoder_init(&encoderL);
-
-	motorController_init(&controllerR, &motorR, &encoderR);
-	motorController_init(&controllerL, &motorL, &encoderL);
-
 	/* USER CODE END Init */
 
 	/* Configure the system clock */
@@ -180,10 +173,14 @@ int main(void) {
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
 
-	positionCalculationPeriod = ((htim6.Instance->ARR + 1) / (80000000.0 / (htim6.Instance->PSC + 1)));
-	controllerPeriod = ((htim2.Instance->ARR + 1) / (80000000.0 / (htim2.Instance->PSC + 1)));
+	positionCalculationPeriod = ((htim6.Instance->ARR + 1)
+			/ (80000000.0 / (htim6.Instance->PSC + 1)));
+	controllerPeriod = ((htim2.Instance->ARR + 1)
+			/ (80000000.0 / (htim2.Instance->PSC + 1)));
 
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+
+	reset();
 
 	HAL_UART_Receive_DMA(&huart2, uart_in, UART_IN_BUF_SIZE);
 	HAL_TIM_Base_Start_IT(&htim2);
@@ -223,7 +220,8 @@ void SystemClock_Config(void) {
 
 	/** Configure the main internal regulator output voltage
 	 */
-	if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK) {
+	if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	/** Initializes the RCC Oscillators according to the specified parameters
@@ -245,7 +243,8 @@ void SystemClock_Config(void) {
 	}
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -340,7 +339,8 @@ static void MX_TIM1_Init(void) {
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	sConfigOC.OCMode = TIM_OCMODE_PWM1;
@@ -350,10 +350,12 @@ static void MX_TIM1_Init(void) {
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 	sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
 	sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-	if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1)
+			!= HAL_OK) {
 		Error_Handler();
 	}
-	if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
@@ -367,7 +369,8 @@ static void MX_TIM1_Init(void) {
 	sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
 	sBreakDeadTimeConfig.Break2Filter = 0;
 	sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-	if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK) {
+	if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	/* USER CODE BEGIN TIM1_Init 2 */
@@ -405,7 +408,8 @@ static void MX_TIM2_Init(void) {
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	sConfigOC.OCMode = TIM_OCMODE_TIMING;
@@ -447,7 +451,8 @@ static void MX_TIM6_Init(void) {
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	/* USER CODE BEGIN TIM6_Init 2 */
@@ -482,7 +487,8 @@ static void MX_TIM7_Init(void) {
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig)
+			!= HAL_OK) {
 		Error_Handler();
 	}
 	/* USER CODE BEGIN TIM7_Init 2 */
@@ -552,7 +558,8 @@ static void MX_GPIO_Init(void) {
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOA, DIR_L1_Pin | DIR_L2_Pin | testLED_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, DIR_L1_Pin | DIR_L2_Pin | testLED_Pin,
+			GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
 	HAL_GPIO_WritePin(GPIOB, DIR_R1_Pin | DIR_R2_Pin, GPIO_PIN_RESET);
@@ -571,7 +578,8 @@ static void MX_GPIO_Init(void) {
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	/*Configure GPIO pins : motor_Right_clock_Pin Motor_left_counterclock_Pin orientation_clock_Pin Motor_counterclock_right_Pin */
-	GPIO_InitStruct.Pin = motor_Right_clock_Pin | Motor_left_counterclock_Pin | orientation_clock_Pin | Motor_counterclock_right_Pin;
+	GPIO_InitStruct.Pin = motor_Right_clock_Pin | Motor_left_counterclock_Pin
+			| orientation_clock_Pin | Motor_counterclock_right_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -604,6 +612,20 @@ static void MX_GPIO_Init(void) {
 
 }
 
+void reset() {
+	// Motor Initialization
+	motor_init(&motorR, 'R');
+	motor_init(&motorL, 'L');
+
+	motorEncoder_init(&encoderR);
+	motorEncoder_init(&encoderL);
+
+	motorController_init(&controllerR, &motorR, &encoderR);
+	motorController_init(&controllerL, &motorL, &encoderL);
+
+	orientation_reset();
+}
+
 /* USER CODE BEGIN 4 */
 void motor_init(Motor *m, char name) {
 	m->name = name;
@@ -628,10 +650,10 @@ void motorController_init(MotorController *c, Motor *m, MotorEncoder *e) {
 	c->measAngVel = 0.0;
 }
 
-void uart_in_read(void (*formattingFunc)(char*, uint32_t)) {
+void uart_in_read(void (*handleFunc)(char*, uint32_t)) {
 	// The position at which the DMA writes (can be larger than queue size, if DMA is a lap ahead)
-	int dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR) + UART_IN_BUF_SIZE * uart_dma_laps_ahead;
-
+	int dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR)
+			+ UART_IN_BUF_SIZE * uart_dma_laps_ahead;
 
 	// dma_ptr - uart_in_read_ptr is the number of unread/uninterpreted bytes in queue
 	for (; dma_ptr - uart_in_read_ptr > 0; uart_in_read_ptr++) {
@@ -641,7 +663,8 @@ void uart_in_read(void (*formattingFunc)(char*, uint32_t)) {
 			uart_in_read_ptr = 0;
 			uart_in_lastStart -= UART_IN_BUF_SIZE;
 			uart_dma_laps_ahead--;
-			dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR) + UART_IN_BUF_SIZE * uart_dma_laps_ahead;
+			dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR)
+					+ UART_IN_BUF_SIZE * uart_dma_laps_ahead;
 		}
 
 		// If we find the beginning of a message
@@ -662,8 +685,11 @@ void uart_in_read(void (*formattingFunc)(char*, uint32_t)) {
 
 				// If the start and stop delimiter are on opposite sides of the "queue border"
 				if (uart_in_lastStart < 0) {
-					memcpy(frame, uart_in + UART_IN_BUF_SIZE + uart_in_lastStart, -uart_in_lastStart);
-					memcpy(frame - uart_in_lastStart, uart_in, uart_in_read_ptr + 1);
+					memcpy(frame,
+							uart_in + UART_IN_BUF_SIZE + uart_in_lastStart,
+							-uart_in_lastStart);
+					memcpy(frame - uart_in_lastStart, uart_in,
+							uart_in_read_ptr + 1);
 				} else
 					memcpy(frame, uart_in + uart_in_lastStart, frameLength);
 				validStartDelimiter = false;
@@ -672,64 +698,63 @@ void uart_in_read(void (*formattingFunc)(char*, uint32_t)) {
 				uint32_t dataLength = 0;
 
 				if (from_frame(frame, frameLength, data, &dataLength) == 1) {
-					(*formattingFunc)(data, dataLength);
+					(*handleFunc)(data, dataLength);
 				}
 			}
 		}
 	}
 }
 
-void referenceFormatting(char *uart_msg, uint32_t len) {
+void uart_in_handle(char *uart_msg, uint32_t len) {
+
+	if (uart_in_handle_reset(uart_msg, len)) return;
+	if (uart_in_handle_reference(uart_msg, len)) return;
+}
+
+int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
+	if (uart_msg == "reset") {
+
+		reset();
+		sendPositionAndVelocity();
+
+		return 1;
+	}
+	return -1;
+}
+int8_t uart_in_handle_reference(char *uart_msg, uint32_t len) {
 
 	// Check length of msg
 	if (len != 10)
-		return;
+		return -1;
 
 	// Retrieve reference for right wheel
 	if (uart_msg[0] == 'R') {
 		memcpy(&controllerR.reference, uart_msg + 1, 4);
-	}else if(uart_msg[0] == 'E'){
-		orientAngle = 0.0;
-		controllerL.Encoder->lastAngle = 0;
-		controllerL.Encoder->output = 0.0;
-		controllerL.Encoder->fineAdjustment = 0;
-		controllerL.Encoder->revolutions = 0;
-		controllerL.Encoder->lastTicks = 0;
-
-		controllerR.Encoder->output = 0.0;
-		controllerR.Encoder->fineAdjustment = 0;
-		controllerR.Encoder->revolutions = 0;
-		controllerR.Encoder->lastTicks = 0;
-
-
-		packThe6Floats();
-		memset(packedMotorData, 0, sizeof(packedMotorData));
-
-		to_frame(packedMotorData, position, UART_ID_MOTOR);
-		HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),HAL_MAX_DELAY);
-	}else {
-
-		return;
-	}
+	} else
+		return -1;
 
 	// Retrieve reference for left wheel
 	if (uart_msg[5] == 'L') {
 		memcpy(&controllerL.reference, uart_msg + 6, 4);
-	} else {
-		return;
-	}
+	} else
+		return -1;
+
+	return 1;
 }
 
 float calcDistance(MotorController *c) {
-	float deltaTicks = c->Encoder->output * TOTAL_WHEEL_TICKS - c->Encoder->lastTicks;
+	float deltaTicks = c->Encoder->output * TOTAL_WHEEL_TICKS
+			- c->Encoder->lastTicks;
 	return M_PI * WHEELDIA * (deltaTicks / TOTAL_WHEEL_TICKS);
 }
 
 void calcPositionAndVelocity() {
 	float distR = calcDistance(&controllerR);
 	float distL = calcDistance(&controllerL);
-	controllerR.Encoder->lastTicks = controllerR.Encoder->output * TOTAL_WHEEL_TICKS;
-	controllerL.Encoder->lastTicks = controllerL.Encoder->output * TOTAL_WHEEL_TICKS;
+	controllerR.Encoder->lastTicks = controllerR.Encoder->output
+			* TOTAL_WHEEL_TICKS;
+	controllerL.Encoder->lastTicks = controllerL.Encoder->output
+			* TOTAL_WHEEL_TICKS;
 	float dist = (distL + distR) / 2;
 	posX = posX + dist * cos(posPhi);
 	posY = posY + dist * sin(posPhi);
@@ -748,7 +773,13 @@ void updatePositionsAndVelocities() {
 
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
-	sendPositionAndVelocity();
+
+	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
+		spamCheckX = posX;
+		spamCheckY = posY;
+		spamCheckPhi = posPhi;
+		sendPositionAndVelocity();
+	}
 
 	// Encoder data from top plate
 	calcOrientOutput();
@@ -757,11 +788,11 @@ void updatePositionsAndVelocities() {
 
 void packThe6Floats() {
 
-	uint8_t *pointer = &controllerL.Encoder->output;
+	uint8_t *pointer = &posX;
 	for (int i = 0; i < 4; i++) {
 		position[i] = *(pointer + i);
 	}
-	pointer = &controllerR.Encoder->output;
+	pointer = &posY;
 	for (int k = 4; k < 8; k++) {
 		position[k] = *(pointer + k - 4);
 	}
@@ -769,11 +800,11 @@ void packThe6Floats() {
 	for (int j = 8; j < 12; j++) {
 		position[j] = *(pointer + j - 8);
 	}
-	pointer = &velX;
+	pointer = &controllerL.Encoder->output;
 	for (int m = 12; m < 16; m++) {
 		position[m] = *(pointer + m - 12);
 	}
-	pointer = &velY;
+	pointer = &controllerR.Encoder->output;
 	for (int n = 16; n < 20; n++) {
 		position[n] = *(pointer + n - 16);
 	}
@@ -784,17 +815,12 @@ void packThe6Floats() {
 }
 
 void sendPositionAndVelocity() {
-	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
-		spamCheckX = posX;
-		spamCheckY = posY;
-		spamCheckPhi = posPhi;
-		packThe6Floats();
-		memset(packedMotorData, 0, sizeof(packedMotorData));
+	packThe6Floats();
+	memset(packedMotorData, 0, sizeof(packedMotorData));
 
-		to_frame(packedMotorData, position, UART_ID_MOTOR);
-		HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
-		HAL_MAX_DELAY);
-	}
+	to_frame(packedMotorData, position, UART_ID_MOTOR);
+	HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
+	HAL_MAX_DELAY);
 }
 
 void resetEncoder(MotorController *c) {
@@ -804,52 +830,76 @@ void resetEncoder(MotorController *c) {
 }
 
 void clockcheckRight() {
-	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin) == HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port,
-	Motor_counterclock_right_Pin)) {
+	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin)
+			== HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port,
+			Motor_counterclock_right_Pin)) {
 		controllerR.motor->direction = -1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerR.Encoder->fineAdjustment = abs(
+				(controllerR.Encoder->fineAdjustment
+						+ controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
 	} else {
 		controllerR.motor->direction = 1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerR.Encoder->fineAdjustment = abs(
+				(controllerR.Encoder->fineAdjustment
+						+ controllerR.motor->direction)
+						% (TOTAL_WHEEL_TICKS + 1));
 	}
 
 	checkRevolutions(&controllerR);
 }
 
 void counterclockcheckRight() {
-	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin) == HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port,
-	Motor_counterclock_right_Pin)) {
+	if (HAL_GPIO_ReadPin(motor_Right_clock_GPIO_Port, motor_Right_clock_Pin)
+			== HAL_GPIO_ReadPin(Motor_counterclock_right_GPIO_Port,
+			Motor_counterclock_right_Pin)) {
 		controllerR.motor->direction = 1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerR.Encoder->fineAdjustment = abs(
+				(controllerR.Encoder->fineAdjustment
+						+ controllerR.motor->direction)
+						% (TOTAL_WHEEL_TICKS + 1));
 	} else {
 		controllerR.motor->direction = -1;
-		controllerR.Encoder->fineAdjustment = abs((controllerR.Encoder->fineAdjustment + controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerR.Encoder->fineAdjustment = abs(
+				(controllerR.Encoder->fineAdjustment
+						+ controllerR.motor->direction) % TOTAL_WHEEL_TICKS);
 	}
 
 	checkRevolutions(&controllerR);
 }
 
 void clockcheckLeft() {
-	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin) == HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port,
-	Motor_left_counterclock_Pin)) {
+	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin)
+			== HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port,
+			Motor_left_counterclock_Pin)) {
 		controllerL.motor->direction = -1;
-		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerL.Encoder->fineAdjustment = abs(
+				(controllerL.Encoder->fineAdjustment
+						+ controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
 	} else {
 		controllerL.motor->direction = 1;
-		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerL.Encoder->fineAdjustment = abs(
+				(controllerL.Encoder->fineAdjustment
+						+ controllerL.motor->direction)
+						% (TOTAL_WHEEL_TICKS + 1));
 	}
 
 	checkRevolutions(&controllerL);
 }
 
 void counterclockcheckLeft() {
-	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin) == HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port,
-	Motor_left_counterclock_Pin)) {
+	if (HAL_GPIO_ReadPin(Motor_Left_clock_GPIO_Port, Motor_Left_clock_Pin)
+			== HAL_GPIO_ReadPin(Motor_left_counterclock_GPIO_Port,
+			Motor_left_counterclock_Pin)) {
 		controllerL.motor->direction = 1;
-		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % (TOTAL_WHEEL_TICKS + 1));
+		controllerL.Encoder->fineAdjustment = abs(
+				(controllerL.Encoder->fineAdjustment
+						+ controllerL.motor->direction)
+						% (TOTAL_WHEEL_TICKS + 1));
 	} else {
 		controllerL.motor->direction = -1;
-		controllerL.Encoder->fineAdjustment = abs((controllerL.Encoder->fineAdjustment + controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
+		controllerL.Encoder->fineAdjustment = abs(
+				(controllerL.Encoder->fineAdjustment
+						+ controllerL.motor->direction) % TOTAL_WHEEL_TICKS);
 	}
 
 	checkRevolutions(&controllerL);
@@ -884,7 +934,8 @@ void checkRevolutions(MotorController *c) {
 }
 
 void calcOutput(MotorEncoder *e) {
-	e->output = e->revolutions + ((float) e->fineAdjustment / TOTAL_WHEEL_TICKS);
+	e->output = e->revolutions
+			+ ((float) e->fineAdjustment / TOTAL_WHEEL_TICKS);
 }
 
 void calculateError(MotorController *c) {
@@ -936,7 +987,8 @@ void updateDutyCycle(MotorController *c) {
 
 void setDutyCycle(MotorController *c) {
 	if (c->motor->name == 'R') {
-		htim1.Instance->CCR1 = (uint32_t) ((htim1.Instance->ARR) * c->motor->dutyCycle);
+		htim1.Instance->CCR1 = (uint32_t) ((htim1.Instance->ARR)
+				* c->motor->dutyCycle);
 
 		if (c->motor->direction == 1) {
 			HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 1);
@@ -948,7 +1000,8 @@ void setDutyCycle(MotorController *c) {
 			// MOTOR STOP
 		}
 	} else if (c->motor->name == 'L') {
-		htim1.Instance->CCR2 = (uint32_t) ((htim1.Instance->ARR) * c->motor->dutyCycle);
+		htim1.Instance->CCR2 = (uint32_t) ((htim1.Instance->ARR)
+				* c->motor->dutyCycle);
 
 		if (c->motor->direction == 1) {
 			HAL_GPIO_WritePin(DIR_L1_GPIO_Port, DIR_L1_Pin, 1);
@@ -983,7 +1036,7 @@ void controller(MotorController *c) {
 }
 
 void controlBothMotors() {
-	uart_in_read(&referenceFormatting);
+	uart_in_read(&uart_in_handle);
 	controller(&controllerR);
 	controller(&controllerL);
 }

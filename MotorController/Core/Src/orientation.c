@@ -10,6 +10,11 @@ uint8_t angularPosition[5] = { 0 };
 float angularResolution = 360.0/TOPENCODERRESOLUTION;
 
 
+void orientation_reset() {
+	orientIncrement = 0;
+	orientAngle = 0.0f;
+}
+
 void calcOrientOutput() {
 	 orientAngle = (orientIncrement % TOPENCODERRESOLUTION) * angularResolution; // Antallet af målte inkrementer ganges med hvor stor en grad hver inkrement er
  }
