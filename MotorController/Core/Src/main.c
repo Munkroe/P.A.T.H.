@@ -712,7 +712,7 @@ void uart_in_handle(char *uart_msg, uint32_t len) {
 }
 
 int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
-	if (uart_msg == "reset") {
+	if (strcmp(uart_msg, "reset") == 0) {
 
 		reset();
 		sendPositionAndVelocity();
