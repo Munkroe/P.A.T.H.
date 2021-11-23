@@ -94,6 +94,8 @@ float velY = 0.0;
 float velPhi = 0.0;
 uint8_t position[25] = { 0 };
 
+extern float orientAngle;
+
 uint8_t MOTORID = 2;
 
 float positionCalculationPeriod;
@@ -122,6 +124,8 @@ static void MX_ADC1_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+
+void packThe6Floats();
 
 /* USER CODE END PFP */
 
@@ -684,7 +688,27 @@ void referenceFormatting(char *uart_msg, uint32_t len) {
 	// Retrieve reference for right wheel
 	if (uart_msg[0] == 'R') {
 		memcpy(&controllerR.reference, uart_msg + 1, 4);
-	} else {
+	}else if(uart_msg[0] == 'E'){
+		orientAngle = 0.0;
+		controllerL.Encoder->lastAngle = 0;
+		controllerL.Encoder->output = 0.0;
+		controllerL.Encoder->fineAdjustment = 0;
+		controllerL.Encoder->revolutions = 0;
+		controllerL.Encoder->lastTicks = 0;
+
+		controllerR.Encoder->output = 0.0;
+		controllerR.Encoder->fineAdjustment = 0;
+		controllerR.Encoder->revolutions = 0;
+		controllerR.Encoder->lastTicks = 0;
+
+
+		packThe6Floats();
+		memset(packedMotorData, 0, sizeof(packedMotorData));
+
+		to_frame(packedMotorData, position, UART_ID_MOTOR);
+		HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),HAL_MAX_DELAY);
+	}else {
+
 		return;
 	}
 
