@@ -46,6 +46,9 @@
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
 #define UART_ID_MOTOR 2
+#define MOTOR_VOLTAGE_OFFSET 5
+#define MOTOR_VELOCITY_DEADZONE 0.01
+
 
 /* USER CODE END PD */
 
@@ -195,13 +198,6 @@ int main(void) {
 	/* USER CODE BEGIN WHILE */
 
 	while (1) {
-		//controller(&controllerR);
-
-		//updateDutyCycle(&controllerR);
-		//updateDutyCycle(&controllerL);
-
-		//setDutyCycle(&controllerR);
-		//setDutyCycle(&controllerL);
 
 		/* USER CODE END WHILE */
 
@@ -329,7 +325,7 @@ static void MX_TIM1_Init(void) {
 	htim1.Instance = TIM1;
 	htim1.Init.Prescaler = 0;
 	htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim1.Init.Period = 65535;
+	htim1.Init.Period = 2000 - 1;
 	htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim1.Init.RepetitionCounter = 0;
 	htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -609,8 +605,9 @@ static void MX_GPIO_Init(void) {
 
 	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
+
+/* USER CODE BEGIN 4 */
 
 void reset() {
 	// Motor Initialization
@@ -626,7 +623,6 @@ void reset() {
 	orientation_reset();
 }
 
-/* USER CODE BEGIN 4 */
 void motor_init(Motor *m, char name) {
 	m->name = name;
 	m->direction = 0;
@@ -646,7 +642,7 @@ void motorController_init(MotorController *c, Motor *m, MotorEncoder *e) {
 	c->lastError = 0.0;
 	c->motor = m;
 	c->reference = 0.0;
-	c->voltage = 0.0;
+	c->controlVoltage = 0.0;
 	c->measAngVel = 0.0;
 }
 
@@ -707,8 +703,10 @@ void uart_in_read(void (*handleFunc)(char*, uint32_t)) {
 
 void uart_in_handle(char *uart_msg, uint32_t len) {
 
-	if (uart_in_handle_reset(uart_msg, len)) return;
-	if (uart_in_handle_reference(uart_msg, len)) return;
+	if (uart_in_handle_reset(uart_msg, len))
+		return;
+	if (uart_in_handle_reference(uart_msg, len))
+		return;
 }
 
 int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
@@ -719,25 +717,25 @@ int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
 
 		return 1;
 	}
-	return -1;
+	return 0;
 }
 int8_t uart_in_handle_reference(char *uart_msg, uint32_t len) {
 
 	// Check length of msg
 	if (len != 10)
-		return -1;
+		return 0;
 
 	// Retrieve reference for right wheel
 	if (uart_msg[0] == 'R') {
 		memcpy(&controllerR.reference, uart_msg + 1, 4);
 	} else
-		return -1;
+		return 0;
 
 	// Retrieve reference for left wheel
 	if (uart_msg[5] == 'L') {
 		memcpy(&controllerL.reference, uart_msg + 6, 4);
 	} else
-		return -1;
+		return 0;
 
 	return 1;
 }
@@ -943,16 +941,28 @@ void calculateError(MotorController *c) {
 }
 
 void nextVoltage(MotorController *c) {
-//	if (c->reference = 0.0 && c->voltage < MOTOR_VOLTAGE_STALL) {
-//		c->voltage = 0.0;
-//		return;
-//	}
 
-	c->voltage = c->lastError * 2.82 * controllerPeriod + c->voltage;
-	if (c->voltage > MOTOR_VOLTAGE_MAX) {
-		c->voltage = MOTOR_VOLTAGE_MAX;
-	} else if (c->voltage < -MOTOR_VOLTAGE_MAX) {
-		c->voltage = -MOTOR_VOLTAGE_MAX;
+	if (c->reference == 0.0 && abs(c->measAngVel < MOTOR_VELOCITY_DEADZONE)) c->controlVoltage = 0.0;
+	else c->controlVoltage = c->lastError * 2.82 * controllerPeriod
+			+ c->controlVoltage;
+
+	if (c->controlVoltage > 0) {
+		c->motor->direction = 1;
+	} else if (c->controlVoltage < 0) {
+		c->motor->direction = -1;
+	}
+
+//	if (c->controlVoltage != 0.0)
+//		c->driveVoltage = MOTOR_VOLTAGE_OFFSET * c->motor->direction
+//				+ c->controlVoltage;
+//	else
+//		c->driveVoltage = 0.0;
+	c->driveVoltage = c->controlVoltage;
+
+	if (c->driveVoltage > MOTOR_VOLTAGE_MAX) {
+		c->driveVoltage = MOTOR_VOLTAGE_MAX;
+	} else if (c->driveVoltage < -MOTOR_VOLTAGE_MAX) {
+		c->driveVoltage = -MOTOR_VOLTAGE_MAX;
 	}
 }
 
@@ -967,16 +977,13 @@ void updateAngularVelocity(MotorController *c) {
 }
 
 void updateDutyCycle(MotorController *c) {
-	if (c->voltage > 0) {
-		c->motor->direction = 1;
-	} else if (c->voltage < 0) {
-		c->motor->direction = -1;
-	} else {
+
+	if (c->driveVoltage == 0.0) {
 		c->motor->dutyCycle = 0;
 		return;
 	}
 
-	float pwm = c->voltage / batteryVoltage;
+	float pwm = c->driveVoltage / batteryVoltage;
 
 	if (pwm < 0)
 		pwm = -pwm;
@@ -1023,7 +1030,7 @@ void controller(MotorController *c) {
 	// Measure the angular velocity (feedback)
 	updateAngularVelocity(c);
 
-	// Calculate next voltage according to the controller design
+	// Calculate next controlVoltage according to the controller design
 	nextVoltage(c);
 
 	// Calculate current error to use for next iteration

@@ -56,7 +56,8 @@ typedef struct MotorController {
 	float reference;
 	float measAngVel;
 	float lastError;
-	float voltage;
+	float controlVoltage;
+	float driveVoltage;
 	Motor *motor;
 	MotorEncoder *Encoder;
 } MotorController;
