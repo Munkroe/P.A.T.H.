@@ -46,7 +46,7 @@
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
 #define UART_ID_MOTOR 2
-#define MOTOR_VOLTAGE_OFFSET 0//5
+#define MOTOR_VOLTAGE_OFFSET 0 // 5
 #define MOTOR_VELOCITY_DEADZONE 0.01
 
 /* USER CODE END PD */
@@ -949,10 +949,10 @@ void nextVoltage(MotorController *c) {
 		c->controlVoltage = c->lastError * 2.82 * controllerPeriod
 				+ c->controlVoltage;
 
-	if (c->controlVoltage > MOTOR_VOLTAGE_MAX-MOTOR_VOLTAGE_OFFSET) {
-		c->controlVoltage = MOTOR_VOLTAGE_MAX-MOTOR_VOLTAGE_OFFSET;
-	} else if (c->controlVoltage < -MOTOR_VOLTAGE_MAX+MOTOR_VOLTAGE_OFFSET) {
-		c->controlVoltage = -MOTOR_VOLTAGE_MAX+MOTOR_VOLTAGE_OFFSET;
+	if (c->controlVoltage > MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET) {
+		c->controlVoltage = MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET;
+	} else if (c->controlVoltage < -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET) {
+		c->controlVoltage = -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET;
 	}
 
 	/* Change direction only if we both want to actually
@@ -961,9 +961,9 @@ void nextVoltage(MotorController *c) {
 	 * This enables the controlVoltage to swing around 0V,
 	 * without the MOTOR_VOLTAGE_OFFSET frantically changing polarity.
 	 */
-	if (c->reference > 0 && c->controlVoltage >= 0) {
+	if (/*c->reference > 0 &&*/ c->controlVoltage >= 0) {
 		c->motor->direction = 1;
-	} else if (c->reference < 0 && c->controlVoltage <= 0) {
+	} else if (/*c->reference < 0 &&*/ c->controlVoltage <= 0) {
 		c->motor->direction = -1;
 	}
 
@@ -980,8 +980,8 @@ void updateAngularVelocity(MotorController *c) {
 	c->measAngVel = deltaAngle / controllerPeriod;
 
 	if (abs(c->measAngVel) < MOTOR_ANGULAR_VELOCITY_MIN) {
-			c->measAngVel = 0;
-		}
+		c->measAngVel = 0;
+	}
 }
 
 void updateDutyCycle(MotorController *c) {
@@ -1013,6 +1013,8 @@ void setDutyCycle(MotorController *c) {
 			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 1);
 		} else {
 			// MOTOR STOP
+			HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
+			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
 		}
 	} else if (c->motor->name == 'L') {
 		htim1.Instance->CCR2 = (uint32_t) ((htim1.Instance->ARR)
@@ -1026,6 +1028,8 @@ void setDutyCycle(MotorController *c) {
 			HAL_GPIO_WritePin(DIR_L2_GPIO_Port, DIR_L2_Pin, 1);
 		} else {
 			// MOTOR STOP
+			HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
+			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
 		}
 	} else {
 		return;
