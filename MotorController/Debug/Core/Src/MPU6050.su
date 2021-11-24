@@ -1,0 +1,5 @@
+MPU6050.c:17:19:MPU_Init	32	static
+MPU6050.c:68:7:MPU_Read_Temp	24	static
+MPU6050.c:93:7:MPU_Read_Gyro	72	static
+MPU6050.c:128:7:MPU_Read_Accel	72	static
+MPU6050.c:163:6:MPU6050	8	static

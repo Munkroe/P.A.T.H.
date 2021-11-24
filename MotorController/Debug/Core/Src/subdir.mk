@@ -6,6 +6,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/DCMotorDriver.c \
+../Core/Src/MPU6050.c \
 ../Core/Src/comm_relay.c \
 ../Core/Src/main.c \
 ../Core/Src/orientation.c \
@@ -17,6 +18,7 @@ C_SRCS += \
 
 OBJS += \
 ./Core/Src/DCMotorDriver.o \
+./Core/Src/MPU6050.o \
 ./Core/Src/comm_relay.o \
 ./Core/Src/main.o \
 ./Core/Src/orientation.o \
@@ -28,6 +30,7 @@ OBJS += \
 
 C_DEPS += \
 ./Core/Src/DCMotorDriver.d \
+./Core/Src/MPU6050.d \
 ./Core/Src/comm_relay.d \
 ./Core/Src/main.d \
 ./Core/Src/orientation.d \
