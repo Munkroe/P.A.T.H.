@@ -16,9 +16,8 @@
 #define COMM_DEL_START '$'
 #define COMM_DEL_STOP '@'
 #define COMM_ESCAPE '#'
-//#define PACKAGE_SIZE 25
-#define FRAME_SIZE 51
 
+#define FRAME_SIZE 51
 #define COMM_MAX_FRAME_SIZE 22
 
 typedef enum COMM_DIRECTION {
@@ -31,25 +30,27 @@ typedef struct UartCommHandler {
 	char * buffer;
 	uint16_t bufferSize;
 	UART_HandleTypeDef * huart;
+	bool frameid_enabled;
 
 	// Receiver specific
-	void (*rxHandlerFunc)(char*, uint32_t); // Pointer "rxHandle" to function with arguments char* and uint32_t
-	bool validStartDelimiter;
-	int uart_in_lastStart;
-	int uart_in_read_ptr;
+	void (*rxHandleFunc)(char*, uint32_t, uint8_t); // Pointer "rxHandle" to function with arguments char* and uint32_t
+	int uart_rx_startDel;
+	int uart_rx_read_ptr;
 	int uart_dma_laps_ahead;
-	int uart_in_escapes;
+	int uart_rx_escapeDel;
+
+	// Transmitter specific
+	uint32_t uart_tx_dmaStart;
+	uint32_t uart_tx_dmaEnd;
+	uint32_t uart_tx_queueEnd;
 } UartCommHandler;
 
-int to_frame(char * frame, uint8_t *revolutionAddr, uint8_t *ID);
+int8_t uart_init_tx(UartCommHandler *handler);
 
-int from_frame(const char * frame, size_t len, char * destination, uint32_t *outputLen);
+int8_t uart_init_rx(UartCommHandler *handler);
 
-int8_t uart_init_tx(UartCommHandler *handler, UART_HandleTypeDef *huart,
-		char *buffer);
-
-int8_t uart_init_rx(UartCommHandler *handler, UART_HandleTypeDef *huart,
-		void (*rxHandler)(char*, uint32_t), char *buffer);
+void uart_transmit(UartCommHandler *handler, char *msg, size_t len,
+		uint8_t frameid);
 
 void uart_rxhandle(UartCommHandler *handler);
 

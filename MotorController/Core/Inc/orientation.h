@@ -8,7 +8,7 @@
 #ifndef SRC_ORIENTATION_H_
 #define SRC_ORIENTATION_H_
 
-#include <uart_comm.h>
+#include <frame_comm.h>
 #include "stdint.h"
 #include "main.h"
 
