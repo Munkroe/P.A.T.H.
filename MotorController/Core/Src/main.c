@@ -46,9 +46,8 @@
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
 #define UART_ID_MOTOR 2
-#define MOTOR_VOLTAGE_OFFSET 5
+#define MOTOR_VOLTAGE_OFFSET 0//5
 #define MOTOR_VELOCITY_DEADZONE 0.01
-
 
 /* USER CODE END PD */
 
@@ -942,28 +941,37 @@ void calculateError(MotorController *c) {
 
 void nextVoltage(MotorController *c) {
 
-	if (c->reference == 0.0 && abs(c->measAngVel < MOTOR_VELOCITY_DEADZONE)) c->controlVoltage = 0.0;
-	else c->controlVoltage = c->lastError * 2.82 * controllerPeriod
-			+ c->controlVoltage;
+	// Kill motors if we want to stop and are practically already stopped
+	if (c->reference == 0.0 && abs(c->measAngVel < MOTOR_VELOCITY_DEADZONE))
+		c->controlVoltage = 0.0;
+	else
+		// Normal controller operation
+		c->controlVoltage = c->lastError * 2.82 * controllerPeriod
+				+ c->controlVoltage;
 
-	if (c->controlVoltage > 0) {
+	if (c->controlVoltage > MOTOR_VOLTAGE_MAX-MOTOR_VOLTAGE_OFFSET) {
+		c->controlVoltage = MOTOR_VOLTAGE_MAX-MOTOR_VOLTAGE_OFFSET;
+	} else if (c->controlVoltage < -MOTOR_VOLTAGE_MAX+MOTOR_VOLTAGE_OFFSET) {
+		c->controlVoltage = -MOTOR_VOLTAGE_MAX+MOTOR_VOLTAGE_OFFSET;
+	}
+
+	/* Change direction only if we both want to actually
+	 * change direction (reference), and output voltage is at the offset edge
+	 * (controlVoltage ~= 0 ==> driveVoltage = MOTOR_VOLTAGE_OFFSET).
+	 * This enables the controlVoltage to swing around 0V,
+	 * without the MOTOR_VOLTAGE_OFFSET frantically changing polarity.
+	 */
+	if (c->reference > 0 && c->controlVoltage >= 0) {
 		c->motor->direction = 1;
-	} else if (c->controlVoltage < 0) {
+	} else if (c->reference < 0 && c->controlVoltage <= 0) {
 		c->motor->direction = -1;
 	}
 
-//	if (c->controlVoltage != 0.0)
-//		c->driveVoltage = MOTOR_VOLTAGE_OFFSET * c->motor->direction
-//				+ c->controlVoltage;
-//	else
-//		c->driveVoltage = 0.0;
-	c->driveVoltage = c->controlVoltage;
-
-	if (c->driveVoltage > MOTOR_VOLTAGE_MAX) {
-		c->driveVoltage = MOTOR_VOLTAGE_MAX;
-	} else if (c->driveVoltage < -MOTOR_VOLTAGE_MAX) {
-		c->driveVoltage = -MOTOR_VOLTAGE_MAX;
-	}
+	if (c->controlVoltage != 0.0)
+		c->driveVoltage = MOTOR_VOLTAGE_OFFSET * c->motor->direction
+				+ c->controlVoltage;
+	else
+		c->driveVoltage = 0.0;
 }
 
 void updateAngularVelocity(MotorController *c) {
@@ -972,8 +980,8 @@ void updateAngularVelocity(MotorController *c) {
 	c->measAngVel = deltaAngle / controllerPeriod;
 
 	if (abs(c->measAngVel) < MOTOR_ANGULAR_VELOCITY_MIN) {
-		c->measAngVel = 0;
-	}
+			c->measAngVel = 0;
+		}
 }
 
 void updateDutyCycle(MotorController *c) {
