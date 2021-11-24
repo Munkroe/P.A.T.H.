@@ -75,9 +75,12 @@ char uart_in[UART_IN_BUF_SIZE] = { 0 };
 int uart_in_escapes = 0;
 
 //I2C variables
-uint8_t MPU_in[50] = {0};
-uint8_t MPU_out[512] = {0};
+uint8_t MPU_in[1] = {0};
+uint8_t MPU_out[6] = {0};
 volatile uint8_t globalDMAFlag = 0;
+Axes3 accelBuffer[255] = {0};
+Axes3 gyroBuffer[255] = {0};
+
 
 
 
@@ -165,9 +168,8 @@ int main(void)
 	motorController_init(&controllerR, &motorR, &encoderR);
 	motorController_init(&controllerL, &motorL, &encoderL);
 
-	HAL_I2C_Master_Transmit_DMA (&hi2c3, MPU_Address, MPU_in, sizeof(MPU_in));
-	HAL_I2C_Master_Receive_DMA (&hi2c3, MPU_Address, MPU_out, sizeof(MPU_out));
-
+	HAL_I2C_Master_Transmit_DMA (&hi2c3, MPU_Address, MPU_in, 1); // one tx byte that indicates what register we want to read
+	HAL_I2C_Master_Receive_DMA (&hi2c3, MPU_Address, MPU_out, 6); // six bytes to read since we have x,y,z and two bytes per value
 
 
   /* USER CODE END Init */
