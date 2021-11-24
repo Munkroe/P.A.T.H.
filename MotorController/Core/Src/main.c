@@ -27,6 +27,7 @@
 #include "math.h"
 #include "stdbool.h"
 #include "MPU6050.h"
+#include "circle_queue_struct.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +44,7 @@
 #define DISBETWHEEL 0.38
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256
+#define YOUR_STRUCT Axes3
 
 /* USER CODE END PD */
 
