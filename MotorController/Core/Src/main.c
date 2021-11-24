@@ -40,7 +40,7 @@
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
-#define UART_IN_BUF_SIZE 256
+#define UART_IN_BUF_SIZE 8
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
@@ -182,6 +182,8 @@ int main(void)
 
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 
+	HAL_DMA_Init(&hdma_usart2_tx);
+
 	uart_init();
 
 	reset_odometry();
@@ -197,8 +199,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	char msg[] = "Hej med dig!";
-	uart_transmit(&txHandler, msg, strlen(msg), 47);
+//	char msg[] = "Hej med dig!";
+//	uart_transmit(&txHandler, msg, strlen(msg), 47);
 
 	while (1) {
 
@@ -696,6 +698,8 @@ void uart_init() {
 
 void uart_in_handle(char *uart_msg, uint32_t len, uint8_t id) {
 
+	uart_transmit(&txHandler, uart_msg, len, id);
+	return;
 	if (uart_in_handle_reset(uart_msg, len))
 		return;
 	if (uart_in_handle_reference(uart_msg, len))

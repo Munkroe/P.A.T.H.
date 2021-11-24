@@ -44,6 +44,7 @@
 /* USER CODE BEGIN PV */
 
 extern UartCommHandler rxHandler;
+extern UartCommHandler txHandler;
 
 /* USER CODE END PV */
 
@@ -63,6 +64,7 @@ extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -280,10 +282,14 @@ void DMA1_Channel6_IRQHandler(void)
 void DMA1_Channel7_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel7_IRQn 0 */
+  uint32_t flag_it = hdma_usart2_tx.DmaBaseAddress->ISR;
+  uint32_t source_it = hdma_usart2_tx.Instance->CCR;
+  bool transfer_cplt = ((flag_it & (DMA_FLAG_TC1 << (hdma_usart2_tx.ChannelIndex & 0x1CU))) != 0U) && ((source_it & DMA_IT_TC) != 0U);
 
   /* USER CODE END DMA1_Channel7_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
   /* USER CODE BEGIN DMA1_Channel7_IRQn 1 */
+  //if (transfer_cplt)
 
   /* USER CODE END DMA1_Channel7_IRQn 1 */
 }
@@ -315,6 +321,20 @@ void TIM2_IRQHandler(void)
   /* USER CODE BEGIN TIM2_IRQn 1 */
 	controlBothMotors();
   /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+  uart_tx_dma_continue(&txHandler);
+  /* USER CODE END USART2_IRQn 1 */
 }
 
 /**

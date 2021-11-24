@@ -49,8 +49,10 @@ int8_t uart_init_tx(UartCommHandler *handler);
 
 int8_t uart_init_rx(UartCommHandler *handler);
 
-void uart_transmit(UartCommHandler *handler, char *msg, size_t len,
+int8_t uart_transmit(UartCommHandler *handler, char *msg, size_t len,
 		uint8_t frameid);
+
+void uart_tx_dma_continue(UartCommHandler *handler);
 
 void uart_rxhandle(UartCommHandler *handler);
 
