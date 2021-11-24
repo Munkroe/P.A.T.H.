@@ -8,8 +8,8 @@
 #ifndef SRC_ORIENTATION_H_
 #define SRC_ORIENTATION_H_
 
+#include <uart_comm.h>
 #include "stdint.h"
-#include "comm_relay.h"
 #include "main.h"
 
 extern UART_HandleTypeDef huart2;

@@ -29,6 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
+#include "uart_comm.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -83,6 +84,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 
 void UpdateBatteryVoltage();
+void reset_odometry();
 
 /* USER CODE END EFP */
 

@@ -43,7 +43,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
-extern int uart_dma_laps_ahead;
+extern UartCommHandler rxHandler;
 
 /* USER CODE END PV */
 
@@ -269,7 +269,7 @@ void DMA1_Channel6_IRQHandler(void)
   /* USER CODE END DMA1_Channel6_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart2_rx);
   /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
-	uart_dma_laps_ahead++;
+  uart_dma_lap_increase(&rxHandler);
   /* USER CODE END DMA1_Channel6_IRQn 1 */
 }
 

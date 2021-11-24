@@ -1,0 +1,204 @@
+/*
+ * comm_relay.c
+ *
+ *  Created on: 28. apr. 2021
+ *      Author: Mikkel
+ */
+
+#include <uart_comm.h>
+#include "stdint.h"
+#include "main.h"
+
+int is_special_character(char c);
+
+int8_t uart_init_tx(UartCommHandler *handler, UART_HandleTypeDef *huart,
+		char *buffer) {
+
+	if (handler->huart->Init.Mode == UART_MODE_TX_RX
+			|| handler->huart->Init.Mode == UART_MODE_TX) {
+		// Enable RX
+
+		handler->direction = DIRECTION_TX;
+
+		handler->huart = huart;
+		handler->rxHandlerFunc = NULL;
+		handler->buffer = buffer;
+		handler->bufferSize = sizeof(handler->buffer);
+
+		HAL_UART_Transmit_DMA(handler->huart, handler->buffer,
+				handler->bufferSize);
+
+	} else
+		return 0;
+
+	return 1;
+}
+
+int8_t uart_init_rx(UartCommHandler *handler, UART_HandleTypeDef *huart,
+		void (*rxHandler)(char*, uint32_t), char *buffer) {
+
+	if (handler->huart->Init.Mode & UART_MODE_TX_RX
+			|| handler->huart->Init.Mode & UART_MODE_RX) {
+		// Enable RX
+
+		handler->direction = DIRECTION_RX;
+
+		handler->huart = huart;
+		handler->rxHandlerFunc = rxHandler;
+		handler->buffer = buffer;
+		handler->bufferSize = sizeof(handler->buffer);
+
+		HAL_UART_Receive_DMA(handler->huart, handler->buffer,
+				handler->bufferSize);
+
+		handler->validStartDelimiter = false;
+		handler->uart_in_lastStart = -1;
+		handler->uart_in_read_ptr = 0;
+		handler->uart_dma_laps_ahead = 0;
+		handler->uart_in_escapes = 0;
+	} else
+		return 0;
+
+	return 1;
+}
+
+int to_frame(char *frame, uint8_t *revolutionAddr, uint8_t *ID) {
+
+	int i = 2, j = 0, PACKAGE_SIZE = 0;
+
+	frame[0] = COMM_DEL_START;
+	frame[1] = ID;
+
+	if (ID == 3) {
+		PACKAGE_SIZE = 5;
+	} else if (ID == 2) {
+		PACKAGE_SIZE = 24;
+	}
+
+	for (; i < FRAME_SIZE && j < PACKAGE_SIZE; i++, j++) {
+		char c;
+		c = *(revolutionAddr + j);
+
+		if (is_special_character(c)) {
+			frame[i] = COMM_ESCAPE;
+			frame[i + 1] = c + 2;
+			i++;
+		} else {
+			frame[i] = c;
+		}
+	}
+
+	frame[i] = COMM_DEL_STOP;
+
+	return 1;
+}
+
+int is_special_character(char c) {
+	if ((c == COMM_DEL_START) || (c == COMM_DEL_STOP) || (c == COMM_ESCAPE)
+			|| (c == 0))
+		return 1;
+	return 0;
+}
+
+int from_frame(const char *frame, size_t len, char *destination,
+		uint32_t *outputLen) {
+	uint32_t indexFrame = 0, indexDest = 0;
+
+	if (frame[0] == COMM_DEL_START)
+		indexFrame++;
+
+	for (; indexFrame < len - 1; indexFrame++, indexDest++) {
+		char c = 0;
+
+		if (frame[indexFrame] == COMM_DEL_START)
+			return -1; // If we meet start delimiter inside frame data, something's wrong.
+		if (frame[indexFrame] == COMM_DEL_STOP)
+			return 1; // If we meet stop delimiter inside frame data, it is just a shorter message.
+
+		if (frame[indexFrame] == COMM_ESCAPE) {
+			c = frame[indexFrame + 1] - 2; // Return the character after the escape character minus 2
+			indexFrame++;
+		} else
+			c = frame[indexFrame]; // There was no escape character, so return it
+
+		destination[indexDest] = c; 	// Insert the data
+	}
+
+	// Check whether the last character is either the specified stop delimiter or '0'
+	if (indexFrame < len) {
+		if (!(frame[indexFrame] == COMM_DEL_STOP || frame[indexFrame] == 0))
+			return -1;
+	}
+
+	*outputLen = indexDest;
+
+	return 1;
+}
+
+void uart_rxhandle(UartCommHandler *handler) {
+
+	if (handler->direction != DIRECTION_RX) return;
+
+	// The position at which the DMA writes (can be larger than queue size, if DMA is a lap ahead)
+	int dma_ptr =
+			(handler->bufferSize - handler->huart->hdmarx->Instance->CNDTR)
+					+ handler->bufferSize * handler->uart_dma_laps_ahead;
+
+	// dma_ptr - uart_in_read_ptr is the number of unread/uninterpreted bytes in queue
+	for (; dma_ptr - handler->uart_in_read_ptr > 0;
+			handler->uart_in_read_ptr++) {
+
+		// If read pointer crosses "queue border"
+		if (handler->uart_in_read_ptr >= handler->bufferSize) {
+			handler->uart_in_read_ptr = 0;
+			handler->uart_in_lastStart -= handler->bufferSize;
+			handler->uart_dma_laps_ahead--;
+			dma_ptr = (handler->bufferSize
+					- handler->huart->hdmarx->Instance->CNDTR)
+					+ handler->bufferSize * handler->uart_dma_laps_ahead;
+		}
+
+		// If we find the beginning of a message
+		if (handler->buffer[handler->uart_in_read_ptr] == COMM_DEL_START) {
+			handler->validStartDelimiter = true;
+			handler->uart_in_lastStart = handler->uart_in_read_ptr;
+			handler->uart_in_escapes = 0;
+		} else if (handler->buffer[handler->uart_in_read_ptr] == COMM_ESCAPE)
+			handler->uart_in_escapes++;
+
+		// If we find the end of a message
+		else if (handler->buffer[handler->uart_in_read_ptr] == COMM_DEL_STOP) {
+
+			int frameLength = handler->uart_in_read_ptr
+					- handler->uart_in_lastStart + 1;
+
+			if (frameLength <= COMM_MAX_FRAME_SIZE) {
+				char frame[COMM_MAX_FRAME_SIZE] = { 0 };
+
+				// If the start and stop delimiter are on opposite sides of the "queue border"
+				if (handler->uart_in_lastStart < 0) {
+					memcpy(frame,
+							handler->buffer + handler->bufferSize
+									+ handler->uart_in_lastStart,
+							-handler->uart_in_lastStart);
+					memcpy(frame - handler->uart_in_lastStart, handler->buffer,
+							handler->uart_in_read_ptr + 1);
+				} else
+					memcpy(frame, handler->buffer + handler->uart_in_lastStart,
+							frameLength);
+				handler->validStartDelimiter = false;
+
+				char data[COMM_MAX_FRAME_SIZE] = { 0 };
+				uint32_t dataLength = 0;
+
+				if (from_frame(frame, frameLength, data, &dataLength) == 1) {
+					(*handler->rxHandlerFunc)(data, dataLength);
+				}
+			}
+		}
+	}
+}
+
+void uart_dma_lap_increase(UartCommHandler * handler) {
+	handler->uart_dma_laps_ahead++;
+}

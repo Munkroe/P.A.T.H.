@@ -18,11 +18,11 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <uart_comm.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "comm_relay.h"
 #include "math.h"
 #include "stdbool.h"
 #include "orientation.h"
@@ -68,12 +68,11 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
-bool validStartDelimiter = false;
-int uart_in_lastStart = -1;
-int uart_in_read_ptr = 0;
-int uart_dma_laps_ahead = 0;
-char uart_in[UART_IN_BUF_SIZE] = { 0 };
-int uart_in_escapes = 0;
+char uart_rxbuffer[UART_IN_BUF_SIZE] = { 0 };
+UartCommHandler rxHandler;
+
+char uart_txbuffer[UART_IN_BUF_SIZE] = { 0 };
+UartCommHandler txHandler;
 
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
@@ -127,7 +126,7 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 void packThe6Floats();
-void uart_in_read(void (*handleFunc)(char*, uint32_t));
+
 void uart_in_handle(char*, uint32_t);
 int8_t uart_in_handle_reset(char*, uint32_t);
 int8_t uart_in_handle_reference(char*, uint32_t);
@@ -182,9 +181,11 @@ int main(void) {
 
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 
-	reset();
+	if (!uart_init_rx(&rxHandler, &huart2, &uart_in_handle, uart_rxbuffer)) Error_Handler();
+	if (!uart_init_tx(&txHandler, &huart2, uart_txbuffer)) Error_Handler();
 
-	HAL_UART_Receive_DMA(&huart2, uart_in, UART_IN_BUF_SIZE);
+	reset_odometry();
+
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim7);
@@ -608,7 +609,7 @@ static void MX_GPIO_Init(void) {
 
 /* USER CODE BEGIN 4 */
 
-void reset() {
+void reset_odometry() {
 	// Motor Initialization
 	motor_init(&motorR, 'R');
 	motor_init(&motorL, 'L');
@@ -645,61 +646,6 @@ void motorController_init(MotorController *c, Motor *m, MotorEncoder *e) {
 	c->measAngVel = 0.0;
 }
 
-void uart_in_read(void (*handleFunc)(char*, uint32_t)) {
-	// The position at which the DMA writes (can be larger than queue size, if DMA is a lap ahead)
-	int dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR)
-			+ UART_IN_BUF_SIZE * uart_dma_laps_ahead;
-
-	// dma_ptr - uart_in_read_ptr is the number of unread/uninterpreted bytes in queue
-	for (; dma_ptr - uart_in_read_ptr > 0; uart_in_read_ptr++) {
-
-		// If read pointer crosses "queue border"
-		if (uart_in_read_ptr >= UART_IN_BUF_SIZE) {
-			uart_in_read_ptr = 0;
-			uart_in_lastStart -= UART_IN_BUF_SIZE;
-			uart_dma_laps_ahead--;
-			dma_ptr = (UART_IN_BUF_SIZE - huart2.hdmarx->Instance->CNDTR)
-					+ UART_IN_BUF_SIZE * uart_dma_laps_ahead;
-		}
-
-		// If we find the beginning of a message
-		if (uart_in[uart_in_read_ptr] == COMM_DEL_START) {
-			validStartDelimiter = true;
-			uart_in_lastStart = uart_in_read_ptr;
-			uart_in_escapes = 0;
-		} else if (uart_in[uart_in_read_ptr] == COMM_ESCAPE)
-			uart_in_escapes++;
-
-		// If we find the end of a message
-		else if (uart_in[uart_in_read_ptr] == COMM_DEL_STOP) {
-
-			int frameLength = uart_in_read_ptr - uart_in_lastStart + 1;
-
-			if (frameLength <= COMM_MAX_FRAME_SIZE) {
-				char frame[COMM_MAX_FRAME_SIZE] = { 0 };
-
-				// If the start and stop delimiter are on opposite sides of the "queue border"
-				if (uart_in_lastStart < 0) {
-					memcpy(frame,
-							uart_in + UART_IN_BUF_SIZE + uart_in_lastStart,
-							-uart_in_lastStart);
-					memcpy(frame - uart_in_lastStart, uart_in,
-							uart_in_read_ptr + 1);
-				} else
-					memcpy(frame, uart_in + uart_in_lastStart, frameLength);
-				validStartDelimiter = false;
-
-				char data[COMM_MAX_FRAME_SIZE] = { 0 };
-				uint32_t dataLength = 0;
-
-				if (from_frame(frame, frameLength, data, &dataLength) == 1) {
-					(*handleFunc)(data, dataLength);
-				}
-			}
-		}
-	}
-}
-
 void uart_in_handle(char *uart_msg, uint32_t len) {
 
 	if (uart_in_handle_reset(uart_msg, len))
@@ -711,7 +657,7 @@ void uart_in_handle(char *uart_msg, uint32_t len) {
 int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
 	if (strcmp(uart_msg, "reset") == 0) {
 
-		reset();
+		reset_odometry();
 		sendPositionAndVelocity();
 
 		return 1;
@@ -816,8 +762,8 @@ void sendPositionAndVelocity() {
 	memset(packedMotorData, 0, sizeof(packedMotorData));
 
 	to_frame(packedMotorData, position, UART_ID_MOTOR);
-	HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
-	HAL_MAX_DELAY);
+	//HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
+	//HAL_MAX_DELAY);
 }
 
 void resetEncoder(MotorController *c) {
@@ -1055,7 +1001,7 @@ void controller(MotorController *c) {
 }
 
 void controlBothMotors() {
-	uart_in_read(&uart_in_handle);
+	//uart_rxhandle(&rxHandler);
 	controller(&controllerR);
 	controller(&controllerL);
 }
