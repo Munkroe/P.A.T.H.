@@ -26,6 +26,7 @@
 #include "comm_relay.h"
 #include "math.h"
 #include "stdbool.h"
+#include "MPU6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +55,8 @@
 ADC_HandleTypeDef hadc1;
 
 I2C_HandleTypeDef hi2c3;
+DMA_HandleTypeDef hdma_i2c3_tx;
+DMA_HandleTypeDef hdma_i2c3_rx;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -70,6 +73,13 @@ int uart_in_read_ptr = 0;
 int uart_dma_laps_ahead = 0;
 char uart_in[UART_IN_BUF_SIZE] = { 0 };
 int uart_in_escapes = 0;
+
+//I2C variables
+uint8_t MPU_in[50] = {0};
+uint8_t MPU_out[512] = {0};
+volatile uint8_t globalDMAFlag = 0;
+
+
 
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
@@ -154,6 +164,11 @@ int main(void)
 
 	motorController_init(&controllerR, &motorR, &encoderR);
 	motorController_init(&controllerL, &motorL, &encoderL);
+
+	HAL_I2C_Master_Transmit_DMA (&hi2c3, MPU_Address, MPU_in, sizeof(MPU_in));
+	HAL_I2C_Master_Receive_DMA (&hi2c3, MPU_Address, MPU_out, sizeof(MPU_out));
+
+
 
   /* USER CODE END Init */
 
@@ -612,6 +627,12 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
   /* DMA1_Channel6_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
@@ -1066,6 +1087,23 @@ void UpdateBatteryVoltage() {
 	uint32_t adc_val = HAL_ADC_GetValue(&hadc1); // Get the ADC value
 	batteryVoltage = adc_val * voltageMeasScaling;
 }
+
+
+void HAL_I2C_MasterTxCpltCallback (I2C_HandleTypeDef * hi2c)
+{
+	MPU_in[0] = MPU_GyroOut;
+	globalDMAFlag = 1;
+}
+
+void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef * hi2c)
+{
+  if(globalDMAFlag == 1){
+	  //TODO circular buffer for all gyro reads
+  }else{
+	  //TODO circular buffer for all accel reads
+  }
+}
+
 
 /* USER CODE END 4 */
 
