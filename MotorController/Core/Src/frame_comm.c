@@ -24,6 +24,7 @@ int8_t uart_init_tx(UartCommHandler *handler) {
 
 		// TODO: Make sure it is in normal mode
 		// TODO: Make sure USART has interrupts enabled in stm32l4xx_it
+		// TODO: Move HAL_DMA_INIT(); here
 	} else
 		return 0;
 	return 1;
@@ -45,6 +46,7 @@ int8_t uart_init_rx(UartCommHandler *handler) {
 //		HAL_DMA_UnRegisterCallback(handler->huart->hdmarx, HAL_DMA_XFER_HALFCPLT_CB_ID);
 
 		// TODO: Make sure it is in circular mode
+		// TODO: Move HAL_DMA_INIT(); here
 
 		// Enable RX
 		if (HAL_UART_Receive_DMA(handler->huart, handler->buffer,
