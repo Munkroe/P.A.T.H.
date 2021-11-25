@@ -27,23 +27,23 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  00020030  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0001c9d2  00000000  00000000  00020060  2**0
+ 12 .debug_info   0001caa2  00000000  00000000  00020060  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 000032bc  00000000  00000000  0003ca32  2**0
+ 13 .debug_abbrev 000032a4  00000000  00000000  0003cb02  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00001758  00000000  00000000  0003fcf0  2**3
+ 14 .debug_aranges 00001758  00000000  00000000  0003fda8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_ranges 00001620  00000000  00000000  00041448  2**3
+ 15 .debug_ranges 00001620  00000000  00000000  00041500  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  00004b61  00000000  00000000  00042a68  2**0
+ 16 .debug_macro  00004b61  00000000  00000000  00042b20  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   00019e57  00000000  00000000  000475c9  2**0
+ 17 .debug_line   0001a00b  00000000  00000000  00047681  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000de28a  00000000  00000000  00061420  2**0
+ 18 .debug_str    000de349  00000000  00000000  0006168c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  0013f6aa  2**0
+ 19 .comment      00000053  00000000  00000000  0013f9d5  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  0000682c  00000000  00000000  0013f700  2**2
+ 20 .debug_frame  00006834  00000000  00000000  0013fa28  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -1385,12 +1385,12 @@ HAL_StatusTypeDef MPU_Init(I2C_HandleTypeDef *I2C_handler) {
  */
 #include "circle_queue_struct.h"
 
-int StructQueueFull(StructQueue *q){
+int StructQueueFull(StructQueue *q) {
  8000fac:	b480      	push	{r7}
  8000fae:	b083      	sub	sp, #12
  8000fb0:	af00      	add	r7, sp, #0
  8000fb2:	6078      	str	r0, [r7, #4]
-	return (((q->pointWR ) % q->queueLength) == q->pointRD && (q->pointWR) != 0);
+	return (((q->pointWR) % q->queueLength) == q->pointRD && (q->pointWR) != 0);
  8000fb4:	687b      	ldr	r3, [r7, #4]
  8000fb6:	885b      	ldrh	r3, [r3, #2]
  8000fb8:	687a      	ldr	r2, [r7, #4]
@@ -1419,7 +1419,7 @@ int StructQueueFull(StructQueue *q){
 
 08000fea <EnterStructQueue>:
 
-int StructQueueEmpty(StructQueue *q){
+int StructQueueEmpty(StructQueue *q) {
 	return (q->pointWR == q->pointRD);
 }
 
@@ -1439,8 +1439,7 @@ int EnterStructQueue(StructQueue *q, Axes3 *data) {
 		return 0;
  8001000:	2300      	movs	r3, #0
  8001002:	e01f      	b.n	8001044 <EnterStructQueue+0x5a>
-	}
-	else {
+	} else {
 		q->queue[q->pointWR] = *data;
  8001004:	687b      	ldr	r3, [r7, #4]
  8001006:	689a      	ldr	r2, [r3, #8]
@@ -1456,8 +1455,7 @@ int EnterStructQueue(StructQueue *q, Axes3 *data) {
  800101a:	ca07      	ldmia	r2, {r0, r1, r2}
  800101c:	e883 0007 	stmia.w	r3, {r0, r1, r2}
 
-
-		if ((q->pointWR + 1) == q->queueLength){
+		if ((q->pointWR + 1) == q->queueLength) {
  8001020:	687b      	ldr	r3, [r7, #4]
  8001022:	885b      	ldrh	r3, [r3, #2]
  8001024:	3301      	adds	r3, #1
@@ -1470,8 +1468,7 @@ int EnterStructQueue(StructQueue *q, Axes3 *data) {
  8001030:	2200      	movs	r2, #0
  8001032:	805a      	strh	r2, [r3, #2]
  8001034:	e005      	b.n	8001042 <EnterStructQueue+0x58>
-		}
-		else{
+		} else {
 			q->pointWR += 1;
  8001036:	687b      	ldr	r3, [r7, #4]
  8001038:	885b      	ldrh	r3, [r3, #2]
@@ -7019,104 +7016,47 @@ void SystemInit(void)
  80033d8:	40021000 	.word	0x40021000
 
 080033dc <Reset_Handler>:
-
-    .section	.text.Reset_Handler
-	.weak	Reset_Handler
-	.type	Reset_Handler, %function
-Reset_Handler:
-  ldr   sp, =_estack    /* Set stack pointer */
  80033dc:	f8df d034 	ldr.w	sp, [pc, #52]	; 8003414 <LoopForever+0x2>
-
-/* Call the clock system initialization function.*/
-    bl  SystemInit
  80033e0:	f7ff ffca 	bl	8003378 <SystemInit>
-
-/* Copy the data segment initializers from flash to SRAM */
-  movs	r1, #0
  80033e4:	2100      	movs	r1, #0
-  b	LoopCopyDataInit
  80033e6:	e003      	b.n	80033f0 <LoopCopyDataInit>
 
 080033e8 <CopyDataInit>:
-
-CopyDataInit:
-	ldr	r3, =_sidata
  80033e8:	4b0b      	ldr	r3, [pc, #44]	; (8003418 <LoopForever+0x6>)
-	ldr	r3, [r3, r1]
  80033ea:	585b      	ldr	r3, [r3, r1]
-	str	r3, [r0, r1]
  80033ec:	5043      	str	r3, [r0, r1]
-	adds	r1, r1, #4
  80033ee:	3104      	adds	r1, #4
 
 080033f0 <LoopCopyDataInit>:
-
-LoopCopyDataInit:
-	ldr	r0, =_sdata
  80033f0:	480a      	ldr	r0, [pc, #40]	; (800341c <LoopForever+0xa>)
-	ldr	r3, =_edata
  80033f2:	4b0b      	ldr	r3, [pc, #44]	; (8003420 <LoopForever+0xe>)
-	adds	r2, r0, r1
  80033f4:	1842      	adds	r2, r0, r1
-	cmp	r2, r3
  80033f6:	429a      	cmp	r2, r3
-	bcc	CopyDataInit
  80033f8:	d3f6      	bcc.n	80033e8 <CopyDataInit>
-	ldr	r2, =_sbss
  80033fa:	4a0a      	ldr	r2, [pc, #40]	; (8003424 <LoopForever+0x12>)
-	b	LoopFillZerobss
  80033fc:	e002      	b.n	8003404 <LoopFillZerobss>
 
 080033fe <FillZerobss>:
-/* Zero fill the bss segment. */
-FillZerobss:
-	movs	r3, #0
  80033fe:	2300      	movs	r3, #0
-	str	r3, [r2], #4
  8003400:	f842 3b04 	str.w	r3, [r2], #4
 
 08003404 <LoopFillZerobss>:
-
-LoopFillZerobss:
-	ldr	r3, = _ebss
  8003404:	4b08      	ldr	r3, [pc, #32]	; (8003428 <LoopForever+0x16>)
-	cmp	r2, r3
  8003406:	429a      	cmp	r2, r3
-	bcc	FillZerobss
  8003408:	d3f9      	bcc.n	80033fe <FillZerobss>
-
-/* Call static constructors */
-    bl __libc_init_array
  800340a:	f006 fdf9 	bl	800a000 <__libc_init_array>
-/* Call the application's entry point.*/
-	bl	main
  800340e:	f7fd fefb 	bl	8001208 <main>
 
 08003412 <LoopForever>:
-
-LoopForever:
-    b LoopForever
  8003412:	e7fe      	b.n	8003412 <LoopForever>
-  ldr   sp, =_estack    /* Set stack pointer */
  8003414:	20010000 	.word	0x20010000
-	ldr	r3, =_sidata
  8003418:	0800b3d8 	.word	0x0800b3d8
-	ldr	r0, =_sdata
  800341c:	20000000 	.word	0x20000000
-	ldr	r3, =_edata
  8003420:	20000030 	.word	0x20000030
-	ldr	r2, =_sbss
  8003424:	20000030 	.word	0x20000030
-	ldr	r3, = _ebss
  8003428:	200005a0 	.word	0x200005a0
 
 0800342c <ADC1_IRQHandler>:
- * @retval : None
-*/
-    .section	.text.Default_Handler,"ax",%progbits
-Default_Handler:
-Infinite_Loop:
-	b	Infinite_Loop
  800342c:	e7fe      	b.n	800342c <ADC1_IRQHandler>
 
 0800342e <HAL_Init>:

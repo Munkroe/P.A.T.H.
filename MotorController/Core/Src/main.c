@@ -85,15 +85,18 @@ Axes3 gyroQueue[MPU_QUEUE_LENGTH] = {0};
 StructQueue accel = {.pointRD = 0, .pointWR = 0, .queue = accelQueue, .queueLength = MPU_QUEUE_LENGTH};
 StructQueue gyro = {.pointRD = 0, .pointWR = 0, .queue = gyroQueue, .queueLength = MPU_QUEUE_LENGTH};
 
-//LP filter coefficients
+//LP filter coefficients. Calculate based on T and W_c
 float A = pow(1.8977, -6);
 float B = pow(1.9177, -6);
 float C = 0;
 float D = 0.9691;
 float E = -2.9377;
 float F = 2.9686;
+
 Axes3 filteredAccel[MPU_QUEUE_LENGTH] = {0};
 Axes3 filteredGyro[MPU_QUEUE_LENGTH] = {0};
+StructQueue accelFilteredQueue = {.pointRD = 0, .pointWR = 0, .queue = filteredAccel, .queueLength = MPU_QUEUE_LENGTH};
+StructQueue gyroFilteredQueue = {.pointRD = 0, .pointWR = 0, .queue = filteredGyro, .queueLength = MPU_QUEUE_LENGTH};
 
 
 float batteryVoltage = 0.0;
@@ -1136,20 +1139,45 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 void IMU_LP_Filter(){
 //filter gyro
 
+	//This will be the new filtered sample
+	Axes3 gyroFilteredNew = {0};
+
+	//A struct that contain the tree
+	Axes3 gyroFilt[3] = {0};
+	Axes3 gyroRaw[3] = {0};
+	for(int i = 0; i < 4 ; i++){
+		LeaveStructQueue(&gyroFilteredQueue, &gyroFilt[i], i);
+		LeaveStructQueue(&gyro , &gyroRaw[i], i);
+	}
+
 	//filter x
-
+	gyroFilteredNew.x = A*gyroRaw[2].x + B*gyroRaw[1].x + C*gyroRaw[0].x + D*gyroFilt[2].x + E*gyroFilt[1].x + F*gyroFilt[0].x;
 	//filter y
-
+	gyroFilteredNew.y = A*gyroRaw[2].y + B*gyroRaw[1].y + C*gyroRaw[0].y + D*gyroFilt[2].y + E*gyroFilt[1].y + F*gyroFilt[0].y;
 	//filter z
+	gyroFilteredNew.z = A*gyroRaw[2].z + B*gyroRaw[1].z + C*gyroRaw[0].z + D*gyroFilt[2].z + E*gyroFilt[1].z + F*gyroFilt[0].z;
 
-
+	EnterStructQueue(&gyroFilteredQueue, &gyroFilteredNew);
 //filter accel
+	//This will be the new filtered sample
+	Axes3 accelFilteredNew = {0};
+
+	//A struct that contain the tree
+	Axes3 accelFilt[3] = {0};
+	Axes3 accelRaw[3] = {0};
+	for(int i = 0; i < 4 ; i++){
+		LeaveStructQueue(&accelFilteredQueue, &accelFilt[i], i);
+		LeaveStructQueue(&accel , &accelRaw[i], i);
+	}
 
 	//filter x
-
+	accelFilteredNew.x = A*accelRaw[2].x + B*accelRaw[1].x + C*accelRaw[0].x + D*accelFilt[2].x + E*accelFilt[1].x + F*accelFilt[0].x;
 	//filter y
-
+	accelFilteredNew.y = A*accelRaw[2].y + B*accelRaw[1].y + C*accelRaw[0].y + D*accelFilt[2].y + E*accelFilt[1].y + F*accelFilt[0].y;
 	//filter z
+	accelFilteredNew.z = A*accelRaw[2].z + B*accelRaw[1].z + C*accelRaw[0].z + D*accelFilt[2].z + E*accelFilt[1].z + F*accelFilt[0].z;
+
+	EnterStructQueue(&accelFilteredQueue, &accelFilteredNew);
 }
 
 

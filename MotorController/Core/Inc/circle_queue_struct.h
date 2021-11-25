@@ -33,7 +33,7 @@ typedef struct StructQueue {
 int StructQueueFull(StructQueue *q);
 int StructQueueEmpty(StructQueue *q);
 int EnterStructQueue(StructQueue *q, Axes3 *data);
-int LeaveStructQueue(StructQueue *q, Axes3 *data);
+int LeaveStructQueue(StructQueue *q, Axes3 *data, uint8_t backtrack);
 int UnreadElements(StructQueue *q);
 
 #endif /* CIRCLE_QUEUE_STRUCT */

@@ -1,5 +1,5 @@
 circle_queue_struct.c:9:5:StructQueueFull	16	static
 circle_queue_struct.c:13:5:StructQueueEmpty	16	static
 circle_queue_struct.c:17:5:EnterStructQueue	16	static
-circle_queue_struct.c:37:5:LeaveStructQueue	16	static
+circle_queue_struct.c:34:5:LeaveStructQueue	24	static
 circle_queue_struct.c:53:5:UnreadElements	16	static
