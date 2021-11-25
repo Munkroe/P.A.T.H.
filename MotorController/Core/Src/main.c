@@ -44,6 +44,7 @@
 #define DISBETWHEEL 0.38
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256
+#define MPU_QUEUE_LENGTH 255
 
 /* USER CODE END PD */
 
@@ -74,11 +75,25 @@ char uart_in[UART_IN_BUF_SIZE] = { 0 };
 int uart_in_escapes = 0;
 
 //I2C variables
+
 uint8_t MPU_in[1] = { MPU_GyroOut };
 uint8_t MPU_out[6] = { 0 };
 volatile uint8_t globalDMAFlag = 0;
-StructQueue accel = { 0, 0, 255 };
-StructQueue gyro = { 0, 0, 255 };
+Axes3 accelQueue[MPU_QUEUE_LENGTH] = {0};
+Axes3 gyroQueue[MPU_QUEUE_LENGTH] = {0};
+StructQueue accel = {.pointRD = 0, .pointWR = 0, .queue = accelQueue, .queueLength = MPU_QUEUE_LENGTH};
+StructQueue gyro = {.pointRD = 0, .pointWR = 0, .queue = gyroQueue, .queueLength = MPU_QUEUE_LENGTH};
+
+//LP filter coefficients
+float A = 1.8977*10**(-6);
+float B = 1.9177*10**(-6);
+float C = 0;
+float D = 0.9691;
+float E = -2.9377;
+float F = 2.9686;
+Axes3 filteredAccel[MPU_QUEUE_LENGTH] = {0};
+Axes3 filteredGyro[MPU_QUEUE_LENGTH] = {0};
+
 
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
@@ -197,7 +212,9 @@ int main(void) {
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
 	if (MPU_Init(&hi2c3) != HAL_OK) {
-		int dev = 0;
+		while(MPU_Init(&hi2c3) != HAL_OK){
+
+		}
 	}
 	HAL_StatusTypeDef returnValue = HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 
@@ -1041,13 +1058,9 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		rawGyroData_Y = ((int16_t) MPU_out[2] << 8 | MPU_out[3]);
 		rawGyroData_Z = ((int16_t) MPU_out[4] << 8 | MPU_out[5]);
 
-//		newMPUData.x = (float) rawGyroData_X / sensitivity;
-//		newMPUData.y = (float) rawGyroData_Y / sensitivity;
-//		newMPUData.z = (float) rawGyroData_Z / sensitivity;
-
-		newMPUData.x = 24.0;
-		newMPUData.y = 25.0;
-		newMPUData.z = 26.0;
+		newMPUData.x = (float) rawGyroData_X / sensitivity;
+		newMPUData.y = (float) rawGyroData_Y / sensitivity;
+		newMPUData.z = (float) rawGyroData_Z / sensitivity;
 		EnterStructQueue(&gyro, &newMPUData);
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1);
@@ -1075,18 +1088,22 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		rawAccelData_Y = ((int16_t) MPU_out[2] << 8 | MPU_out[3]);
 		rawAccelData_Z = ((int16_t) MPU_out[4] << 8 | MPU_out[5]);
 
-//	newMPUData.x = (float) rawAccelData_X / sensitivity;
-//	newMPUData.y = (float) rawAccelData_X / sensitivity;
-//	newMPUData.y = (float) rawAccelData_X / sensitivity;
-		newMPUData.x = 24.0;
-		newMPUData.y = 25.0;
-		newMPUData.y = 26.0;
+		newMPUData.x = (float) rawAccelData_X / sensitivity;
+		newMPUData.y = (float) rawAccelData_Y / sensitivity;
+		newMPUData.z = (float) rawAccelData_Z / sensitivity;
 		EnterStructQueue(&accel, &newMPUData);
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
 	}
 }
+
+
+IMU_LP_Filter(){
+
+}
+
+
 
 /* USER CODE END 4 */
 
