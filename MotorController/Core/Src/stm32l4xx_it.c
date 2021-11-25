@@ -45,6 +45,8 @@
 
 extern int uart_dma_laps_ahead;
 
+uint32_t s, e, d;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -283,7 +285,10 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+	uint32_t s = micros();
 	counterclockcheckLeft();
+	uint32_t e = micros();
+	uint32_t d = e - s;
 
   /* USER CODE END EXTI9_5_IRQn 1 */
 }
@@ -298,8 +303,8 @@ void TIM2_IRQHandler(void)
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
-  micros_overflow();
-  controlBothMotors();
+	micros_overflow();
+	controlBothMotors();
 
   /* USER CODE END TIM2_IRQn 1 */
 }
@@ -328,9 +333,13 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim6);
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
-  uint32_t s = micros();
+	s = micros();
+
 	updatePositionsAndVelocities();
-uint32_t e = micros();
+
+	e = micros();
+	d = e - s;
+	int k = 34;
   /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 

@@ -16,6 +16,8 @@ int micros_init(TIM_HandleTypeDef *phtim, uint32_t clk_freq);
 
 uint32_t micros();
 
+uint32_t laps();
+
 uint32_t micros_overflow();
 
 
