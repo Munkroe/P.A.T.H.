@@ -40,7 +40,7 @@
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
-#define UART_IN_BUF_SIZE 8
+#define UART_IN_BUF_SIZE 256
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.01
@@ -204,7 +204,6 @@ int main(void)
 
 	while (1) {
 
-		uart_rxhandle(&rxHandler);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -682,7 +681,7 @@ void uart_init() {
 	rxHandler.rxHandleFunc = &uart_in_handle;
 	rxHandler.buffer = uart_rxbuffer;
 	rxHandler.bufferSize = sizeof(uart_rxbuffer);
-	rxHandler.frameid_enabled = true;
+	rxHandler.frameid_enabled = false;
 
 	if (!uart_init_rx(&rxHandler)) Error_Handler();
 
@@ -698,8 +697,6 @@ void uart_init() {
 
 void uart_in_handle(char *uart_msg, uint32_t len, uint8_t id) {
 
-	uart_transmit(&txHandler, uart_msg, len, id);
-	return;
 	if (uart_in_handle_reset(uart_msg, len))
 		return;
 	if (uart_in_handle_reference(uart_msg, len))
@@ -813,9 +810,7 @@ void sendPositionAndVelocity() {
 	packThe6Floats();
 	memset(packedMotorData, 0, sizeof(packedMotorData));
 
-	to_frame(packedMotorData, position, UART_ID_MOTOR);
-	//HAL_UART_Transmit(&huart2, packedMotorData, sizeof(packedMotorData),
-	//HAL_MAX_DELAY);
+	uart_transmit(&txHandler, packedMotorData, sizeof(packedMotorData), UART_ID_MOTOR);
 }
 
 void resetEncoder(MotorController *c) {
@@ -1053,7 +1048,7 @@ void controller(MotorController *c) {
 }
 
 void controlBothMotors() {
-	//uart_rxhandle(&rxHandler);
+	uart_rxhandle(&rxHandler);
 	controller(&controllerR);
 	controller(&controllerL);
 }

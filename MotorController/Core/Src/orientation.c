@@ -9,6 +9,8 @@ char packedOrientData[50] = { 0 };
 uint8_t angularPosition[5] = { 0 };
 float angularResolution = 360.0/TOPENCODERRESOLUTION;
 
+extern UartCommHandler txHandler;
+
 
 void orientation_reset() {
 	orientIncrement = 0;
@@ -72,7 +74,6 @@ void sendOrientData() {
 		packOrient();
 		memset(packedOrientData, 0, sizeof(packedOrientData));
 
-		to_frame(packedOrientData, angularPosition, UART_ID_ORIENTATION);
-		HAL_UART_Transmit(&huart2, packedOrientData, sizeof(packedOrientData), HAL_MAX_DELAY);
+		uart_transmit(&txHandler, packedOrientData, sizeof(packedOrientData), UART_ID_ORIENTATION);
 	}
 }

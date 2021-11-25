@@ -145,7 +145,7 @@ int prevS = 0, prevE = 0, prevQ = 0;
 
 int8_t uart_tx_append_queue(UartCommHandler *handler, char *src, uint16_t len) {
 	// Add tx data to queue
-	char * buff = handler->buffer;
+	char *buff = handler->buffer;
 	uint32_t Q = handler->uart_tx_queueEnd;
 	uint32_t S = handler->uart_tx_dmaStart;
 	uint32_t L = handler->bufferSize;
@@ -160,20 +160,19 @@ int8_t uart_tx_append_queue(UartCommHandler *handler, char *src, uint16_t len) {
 			Q += len;
 		}
 		// Addition has crossed the zero point, but is behind dma start
-		else if (Q + len > L && (Q + len) % L < S) {
+		else if (Q + len >= L && (Q + len) % L < S) {
 			memcpy(buff + Q, src, L - Q);
 			memcpy(buff, src + L - Q, len - L + Q);
 			Q = (Q + len) % L;
-		}
-		else return 0;
-	}
-	else {
+		} else
+			return 0;
+	} else {
 		// QueueEnd and addition is behind dma start, after a previous zero point crossing
 		if (Q + len < S) {
 			memcpy(buff + Q, src, len);
 			Q += len;
-		}
-		else return 0;
+		} else
+			return 0;
 	}
 
 	handler->uart_tx_queueEnd = Q;
@@ -202,17 +201,22 @@ void uart_tx_dma_continue(UartCommHandler *handler) {
 		prevS = handler->uart_tx_dmaStart, prevE = handler->uart_tx_dmaEnd;
 
 		// Move transmission queue
-		if (handler->uart_tx_dmaEnd >= handler->bufferSize) handler->uart_tx_dmaStart = 0; // The end of the array has been reached, restart.
-		else handler->uart_tx_dmaStart = handler->uart_tx_dmaEnd; // Normal
+		if (handler->uart_tx_dmaEnd >= handler->bufferSize)
+			handler->uart_tx_dmaStart = 0; // The end of the array has been reached, restart.
+		else
+			handler->uart_tx_dmaStart = handler->uart_tx_dmaEnd; // Normal
 
-		if (handler->uart_tx_queueEnd < handler->uart_tx_dmaStart) handler->uart_tx_dmaEnd = handler->bufferSize; // Zeropoint has been crossed
-		else handler->uart_tx_dmaEnd = handler->uart_tx_queueEnd;
+		if (handler->uart_tx_queueEnd < handler->uart_tx_dmaStart)
+			handler->uart_tx_dmaEnd = handler->bufferSize; // Zeropoint has been crossed
+		else
+			handler->uart_tx_dmaEnd = handler->uart_tx_queueEnd;
 
 		// Check if there is more to transmit
 		if (handler->uart_tx_dmaStart != handler->uart_tx_dmaEnd) {
 
 			// Transmit
-			HAL_UART_Transmit_DMA(handler->huart, handler->buffer + handler->uart_tx_dmaStart,
+			HAL_UART_Transmit_DMA(handler->huart,
+					handler->buffer + handler->uart_tx_dmaStart,
 					handler->uart_tx_dmaEnd - handler->uart_tx_dmaStart);
 		}
 	}
@@ -253,9 +257,9 @@ void uart_rxhandle(UartCommHandler *handler) {
 		else if (handler->buffer[handler->uart_rx_read_ptr] == COMM_DEL_STOP) {
 
 			int frameLength = handler->uart_rx_read_ptr
-					- handler->uart_rx_startDel /*+ 1*/;
+					- handler->uart_rx_startDel + 1;
 
-			if (frameLength <= COMM_MAX_FRAME_SIZE) {
+			if (frameLength <= COMM_MAX_FRAME_SIZE && frameLength <= handler->bufferSize) {
 				char frame[COMM_MAX_FRAME_SIZE] = { 0 };
 
 				// If the start and stop delimiter are on opposite sides of the "queue border"
@@ -264,15 +268,25 @@ void uart_rxhandle(UartCommHandler *handler) {
 							handler->buffer + handler->bufferSize
 									+ handler->uart_rx_startDel,
 							-handler->uart_rx_startDel);
+					memset(
+							handler->buffer + handler->bufferSize
+									+ handler->uart_rx_startDel, 0,
+							-handler->uart_rx_startDel);
 					memcpy(frame - handler->uart_rx_startDel, handler->buffer,
-							handler->uart_rx_read_ptr /*+ 1*/);
-				} else
+							handler->uart_rx_read_ptr + 1);
+					memset(handler->buffer, 0, handler->uart_rx_read_ptr + 1);
+				} else {
 					memcpy(frame, handler->buffer + handler->uart_rx_startDel,
+												frameLength);
+					memset(handler->buffer + handler->uart_rx_startDel, 0,
 							frameLength);
+				}
+
 
 				char data[COMM_MAX_FRAME_SIZE] = { 0 };
 				char *pData = data;
 				uint32_t dataLength = 0;
+				handler->uart_rx_startDel = -COMM_MAX_FRAME_SIZE;
 
 				if (from_frame(frame, frameLength, pData, &dataLength)) {
 
