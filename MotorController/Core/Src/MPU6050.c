@@ -34,14 +34,14 @@ HAL_StatusTypeDef MPU_Init(I2C_HandleTypeDef *I2C_handler) {
 		return returnValue;
 
 	initializationBuffer[0] = DLPF_CFG;
-	initializationBuffer[1] = 0x00; //Digital low pass filter disable & gyro sample rate at 8 kHz
+	initializationBuffer[1] = 0x01; //Digital low pass filter disable & gyro sample rate at 1 kHz
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
 			initializationBuffer, 2, HAL_MAX_DELAY);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = SMPLRT_DIV;
-	initializationBuffer[1] = 0x07; //Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)  @ 1kHz
+	initializationBuffer[1] = 0x00; //Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)  @ 1kHz
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
 			initializationBuffer, 2, HAL_MAX_DELAY);
 	if (returnValue != HAL_OK)
