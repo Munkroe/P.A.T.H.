@@ -34,7 +34,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
  ../Core/Inc/DCMotorDriver.h ../Core/Inc/main.h ../Core/Inc/comm_relay.h \
  ../Core/Inc/MPU6050.h ../Core/Inc/circle_queue_struct.h \
- ../Core/Inc/MPU6050.h
+ ../Core/Inc/MPU6050.h ../Core/Inc/circle_queue.h
 
 ../Core/Inc/main.h:
 
@@ -115,3 +115,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/circle_queue_struct.h:
 
 ../Core/Inc/MPU6050.h:
+
+../Core/Inc/circle_queue.h:

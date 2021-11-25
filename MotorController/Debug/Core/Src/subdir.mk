@@ -7,6 +7,7 @@
 C_SRCS += \
 ../Core/Src/DCMotorDriver.c \
 ../Core/Src/MPU6050.c \
+../Core/Src/circle_queue.c \
 ../Core/Src/circle_queue_struct.c \
 ../Core/Src/comm_relay.c \
 ../Core/Src/main.c \
@@ -20,6 +21,7 @@ C_SRCS += \
 OBJS += \
 ./Core/Src/DCMotorDriver.o \
 ./Core/Src/MPU6050.o \
+./Core/Src/circle_queue.o \
 ./Core/Src/circle_queue_struct.o \
 ./Core/Src/comm_relay.o \
 ./Core/Src/main.o \
@@ -33,6 +35,7 @@ OBJS += \
 C_DEPS += \
 ./Core/Src/DCMotorDriver.d \
 ./Core/Src/MPU6050.d \
+./Core/Src/circle_queue.d \
 ./Core/Src/circle_queue_struct.d \
 ./Core/Src/comm_relay.d \
 ./Core/Src/main.d \

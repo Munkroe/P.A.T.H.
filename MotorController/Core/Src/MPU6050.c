@@ -22,42 +22,42 @@ HAL_StatusTypeDef MPU_Init(I2C_HandleTypeDef *I2C_handler) {
 	initializationBuffer[0] = MPU_PWR_MGT_1;
 	initializationBuffer[1] = 0x00; //Set clocksource to internal 8MHz oscillator
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = SIGNAL_PATH_RESET;
 	initializationBuffer[1] = 0x07; // Resets gyro, accel & temp signal path to disable any filtering
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = DLPF_CFG;
 	initializationBuffer[1] = 0x01; //Digital low pass filter disable & gyro sample rate at 1 kHz
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = SMPLRT_DIV;
 	initializationBuffer[1] = 0x00; //Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV)  @ 1kHz
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = GYRO_CONFIG;
 	initializationBuffer[1] = GYRO_CONFIG_SCALE; // Sets the full scale to +-2000 degrees per second
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 
 	initializationBuffer[0] = ACCEL_CONFIG;
 	initializationBuffer[1] = ACCEL_CONFIG_SCALE; // Sets the accelerometer full scale to +-16g
 	returnValue = HAL_I2C_Master_Transmit(hi2c, (MPU_Address << 1),
-			initializationBuffer, 2, 10);
+			initializationBuffer, 2, 1);
 	if (returnValue != HAL_OK)
 		return returnValue;
 

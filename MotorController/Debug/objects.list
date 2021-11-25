@@ -1,5 +1,6 @@
 "./Core/Src/DCMotorDriver.o"
 "./Core/Src/MPU6050.o"
+"./Core/Src/circle_queue.o"
 "./Core/Src/circle_queue_struct.o"
 "./Core/Src/comm_relay.o"
 "./Core/Src/main.o"
