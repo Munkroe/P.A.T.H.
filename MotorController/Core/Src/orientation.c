@@ -66,7 +66,7 @@ void checkOrientCounterClock() { //B
 //}
 
 void sendOrientData() {
-	if (spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle) {
+	if (1/*spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle*/) {
 		spamCheckDirOrient = directionOrient;
 		spamCheckOrientAngle = orientAngle;
 		packOrient();

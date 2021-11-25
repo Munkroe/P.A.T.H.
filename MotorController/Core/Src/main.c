@@ -112,6 +112,9 @@ Motor motorL;
 MotorEncoder encoderL;
 MotorController controllerL;
 
+uint32_t ticks = 0;
+uint32_t ticks_ms = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -154,7 +157,7 @@ int main(void) {
 	HAL_Init();
 
 	/* USER CODE BEGIN Init */
-
+	//HAL_SetTickFreq(Freq);
 	/* USER CODE END Init */
 
 	/* Configure the system clock */
@@ -183,6 +186,8 @@ int main(void) {
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 
 	reset();
+	if (!micros_init(&htim2, HAL_RCC_GetPCLK1Freq()))
+		Error_Handler();
 
 	HAL_UART_Receive_DMA(&huart2, uart_in, UART_IN_BUF_SIZE);
 	HAL_TIM_Base_Start_IT(&htim2);
@@ -197,7 +202,8 @@ int main(void) {
 	/* USER CODE BEGIN WHILE */
 
 	while (1) {
-
+		ticks = micros();
+		ticks_ms = HAL_GetTick();
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -604,6 +610,7 @@ static void MX_GPIO_Init(void) {
 
 	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -771,7 +778,7 @@ void updatePositionsAndVelocities() {
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
 
-	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
+	if (1/*spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi*/) {
 		spamCheckX = posX;
 		spamCheckY = posY;
 		spamCheckPhi = posPhi;
@@ -961,9 +968,9 @@ void nextVoltage(MotorController *c) {
 	 * This enables the controlVoltage to swing around 0V,
 	 * without the MOTOR_VOLTAGE_OFFSET frantically changing polarity.
 	 */
-	if (/*c->reference > 0 &&*/ c->controlVoltage >= 0) {
+	if (/*c->reference > 0 &&*/c->controlVoltage >= 0) {
 		c->motor->direction = 1;
-	} else if (/*c->reference < 0 &&*/ c->controlVoltage <= 0) {
+	} else if (/*c->reference < 0 &&*/c->controlVoltage <= 0) {
 		c->motor->direction = -1;
 	}
 
@@ -1055,9 +1062,12 @@ void controller(MotorController *c) {
 }
 
 void controlBothMotors() {
+	uint32_t micros_start = micros();
 	uart_in_read(&uart_in_handle);
 	controller(&controllerR);
 	controller(&controllerL);
+	uint32_t micros_end = micros();
+	uint32_t deltaT = micros_end - micros_start;
 }
 
 void UpdateBatteryVoltage() {
