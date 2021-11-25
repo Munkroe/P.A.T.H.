@@ -6,15 +6,15 @@
  */
 #include "circle_queue_struct.h"
 
-int StructQueueFull(struct StructQueue *q){
+int StructQueueFull(StructQueue *q){
 	return (((q->pointWR +1) % q->queueLength) == q->pointRD);
 }
 
-int StructQueueEmpty(struct StructQueue *q){
+int StructQueueEmpty(StructQueue *q){
 	return (q->pointWR == q->pointRD);
 }
 
-int EnterStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data) {
+int EnterStructQueue(StructQueue *q, Axes3 *data) {
 
 	if (StructQueueFull(q)) {
 		return 0;
@@ -34,7 +34,7 @@ int EnterStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data) {
 	return 1;
 }
 
-int LeaveStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data) {
+int LeaveStructQueue(StructQueue *q, Axes3 *data) {
 	if (StructQueueEmpty(q)){
 		return 0;
 	}
@@ -50,7 +50,7 @@ int LeaveStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data) {
 	return 1;
 }
 
-int UnreadElements(struct StructQueue *q){
+int UnreadElements(StructQueue *q){
 	if (q->pointRD == q->pointWR){
 		return 0;
 	}else {

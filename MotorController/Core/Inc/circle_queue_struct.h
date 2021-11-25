@@ -17,24 +17,23 @@
 #include "MPU6050.h"
 
 #define SIZE_OF_STRUCTQUEUE 160
-#define PACKAGE_SIZE 8
 
-struct CAN_QUEUE_DATA {
-	uint32_t ID;
-	uint8_t data[PACKAGE_SIZE];
-};
+//struct CAN_QUEUE_DATA {
+//	uint32_t ID;
+//	uint8_t data[PACKAGE_SIZE];
+//};
 
 
-struct StructQueue {
+typedef struct StructQueue {
 	uint16_t pointRD, pointWR, queueLength;
-	struct CAN_QUEUE_DATA* queue;
-};
+	Axes3* queue;
+}StructQueue;
 
 
-int StructQueueFull(struct StructQueue *q);
-int StructQueueEmpty(struct StructQueue *q);
-int EnterStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data);
-int LeaveStructQueue(struct StructQueue *q, struct CAN_QUEUE_DATA *data);
-int UnreadElements(struct StructQueue *q);
+int StructQueueFull(StructQueue *q);
+int StructQueueEmpty(StructQueue *q);
+int EnterStructQueue(StructQueue *q, Axes3 *data);
+int LeaveStructQueue(StructQueue *q, Axes3 *data);
+int UnreadElements(StructQueue *q);
 
 #endif /* CIRCLE_QUEUE_STRUCT */
