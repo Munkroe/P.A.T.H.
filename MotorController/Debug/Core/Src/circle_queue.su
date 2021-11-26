@@ -1,4 +1,0 @@
-circle_queue.c:9:5:QueueFull	16	static
-circle_queue.c:13:5:QueueEmpty	16	static
-circle_queue.c:17:5:EnterQueue	16	static
-circle_queue.c:37:5:LeaveQueue	16	static
