@@ -92,7 +92,7 @@ float posPhiPrev = 0.0;
 float velX = 0.0;
 float velY = 0.0;
 float velPhi = 0.0;
-uint8_t position[25] = { 0 };
+uint8_t position[24] = { 0 };
 
 extern float orientAngle;
 
@@ -198,9 +198,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-//	char msg[] = "Hej med dig!";
-//	uart_transmit(&txHandler, msg, strlen(msg), 47);
 
 	while (1) {
 
@@ -529,7 +526,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 9600;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -766,7 +763,7 @@ void updatePositionsAndVelocities() {
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
 
-	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
+	if (1/*spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi*/) {
 		spamCheckX = posX;
 		spamCheckY = posY;
 		spamCheckPhi = posPhi;
@@ -808,9 +805,8 @@ void packThe6Floats() {
 
 void sendPositionAndVelocity() {
 	packThe6Floats();
-	memset(packedMotorData, 0, sizeof(packedMotorData));
-
-	uart_transmit(&txHandler, packedMotorData, sizeof(packedMotorData), UART_ID_MOTOR);
+	uart_transmit(&txHandler, position, sizeof(position), UART_ID_MOTOR);
+	memset(position, 0, sizeof(position));
 }
 
 void resetEncoder(MotorController *c) {

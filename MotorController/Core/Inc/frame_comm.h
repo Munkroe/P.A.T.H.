@@ -17,8 +17,7 @@
 #define COMM_DEL_STOP '@'
 #define COMM_ESCAPE '#'
 
-#define FRAME_SIZE 51
-#define COMM_MAX_FRAME_SIZE 22
+#define COMM_MAX_FRAME_SIZE 100
 
 typedef enum COMM_DIRECTION {
 	DIRECTION_RX,
