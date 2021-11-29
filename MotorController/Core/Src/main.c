@@ -755,6 +755,20 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void reset_odometry() {
+	// Motor Initialization
+	motor_init(&motorR, 'R');
+	motor_init(&motorL, 'L');
+
+	motorEncoder_init(&encoderR);
+	motorEncoder_init(&encoderL);
+
+	motorController_init(&controllerR, &motorR, &encoderR);
+	motorController_init(&controllerL, &motorL, &encoderL);
+
+	orientation_reset();
+}
+
 void motor_init(Motor *m, char name) {
 	m->name = name;
 	m->direction = 0;

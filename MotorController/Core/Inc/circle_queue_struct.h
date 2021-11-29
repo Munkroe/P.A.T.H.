@@ -16,8 +16,6 @@
 #include "stm32l4xx_hal.h"
 #include "MPU6050.h"
 
-#define SIZE_OF_STRUCTQUEUE 160
-
 //struct CAN_QUEUE_DATA {
 //	uint32_t ID;
 //	uint8_t data[PACKAGE_SIZE];
@@ -27,7 +25,7 @@
 typedef struct StructQueue {
 	uint16_t pointRD, pointWR, queueLength;
 	Axes3* queue;
-}StructQueue;
+} StructQueue;
 
 
 int StructQueueFull(StructQueue *q);
