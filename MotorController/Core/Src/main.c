@@ -45,7 +45,7 @@
 #define DISBETWHEEL 0.38
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256
-#define MPU_QUEUE_LENGTH 20
+#define MPU_QUEUE_LENGTH 3
 
 /* USER CODE END PD */
 
@@ -110,28 +110,13 @@ StructQueue gyroFilteredQueue = { .pointRD = 0, .pointWR = 0, .queue =
 		filteredGyro, .queueLength = MPU_QUEUE_LENGTH };
 
 // Known filter response sequences
-float filt_resp_f250_kf250[20] = {
-		0,
-		0,
-		0.581295066636667,
-		0.442945217244330,
-		-0.548697846654317,
-		-0.514458768708141,
-		0.531283458233830,
-		0.526628135142305,
-		-0.525216276051722,
-		-0.527975362294529,
-		0.523703975232896,
-		0.527968506554599,
-		-0.523390663877524,
-		-0.527907349238351,
-		0.523337192993811,
-		0.527884452478231,
-		-0.523330438599569,
-		-0.527878405984266,
-		0.523330186303493,
-		/*0.527876100986305*/0.527877100986305
-};
+float filt_resp_f250_kf250[20] = { 0, 0, 0.581295066636667, 0.442945217244330,
+		-0.548697846654317, -0.514458768708141, 0.531283458233830,
+		0.526628135142305, -0.525216276051722, -0.527975362294529,
+		0.523703975232896, 0.527968506554599, -0.523390663877524,
+		-0.527907349238351, 0.523337192993811, 0.527884452478231,
+		-0.523330438599569, -0.527878405984266, 0.523330186303493,
+		/*0.527876100986305};*/0.527877100986305 };
 
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
@@ -187,7 +172,8 @@ float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
 		float y_old1);
 int8_t samples_equivalence_test(float *a, float *b, uint32_t len,
 		float tolerance);
-int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq, float * comp_seq);
+int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
+		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue);
 
 /* USER CODE END PFP */
 
@@ -257,22 +243,22 @@ int main(void) {
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
-//	if (MPU_Init(&hi2c3) != HAL_OK) {
-//		while (MPU_Init(&hi2c3) != HAL_OK) {
-//
-//		}
-//	}
-//	HAL_StatusTypeDef returnValue = HAL_I2C_Master_Transmit_IT(&hi2c3,
-//			MPU_Address << 1, &MPU_GyroOut, 1);
+	while (MPU_Init(&hi2c3) != HAL_OK) {
+
+	}
+
+	HAL_StatusTypeDef returnValue = HAL_I2C_Master_Transmit_IT(&hi2c3,
+			MPU_Address << 1, &MPU_GyroOut, 1);
 
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-	if (!IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250)) {
-		Error_Handler();
-	}
+//	// Compare filter response to 20 known output samples
+//	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
+//		Error_Handler();
+//	}
 
 	while (1) {
 
@@ -1155,6 +1141,8 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.z = (float) rawGyroData_Z / sensitivity;
 		EnterStructQueue(&gyro, &newMPUData);
 
+		IMU_LP_Filter_calc_next(&gyro, &gyroFilteredQueue);
+
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1);
 
 	} else {
@@ -1185,6 +1173,8 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.z = (float) rawAccelData_Z / sensitivity;
 		EnterStructQueue(&accel, &newMPUData);
 
+		IMU_LP_Filter_calc_next(&accel, &accelFilteredQueue);
+
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
 	}
@@ -1209,101 +1199,74 @@ float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
 			+ F * y_old1;
 }
 
-int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq, float * comp_seq) {
+int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
+		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue) {
 	double sample_time = 1.0 / sample_freq;
+
+	if (MPU_QUEUE_LENGTH != 20) Error_Handler();
 
 	for (uint32_t i = 0; i < MPU_QUEUE_LENGTH; i++) {
 
 		// Generate input sequence
 		double val = sin(2.0 * M_PI * signal_freq * i * sample_time);
-		Axes3 axisVal = { val, 0, 0 };
-		EnterStructQueue(&accel, &axisVal);
+		Axes3 axisVal = { val, val, val };
+		EnterStructQueue(rawQueue, &axisVal);
 
 		// Compute output sequence
-		IMU_LP_Filter();
+		IMU_LP_Filter_calc_next(rawQueue, filtQueue);
 	}
 
 	// Compare output sequences
 	float x[MPU_QUEUE_LENGTH] = { 0 };
+	float y[MPU_QUEUE_LENGTH] = { 0 };
+	float z[MPU_QUEUE_LENGTH] = { 0 };
+
 	for (uint32_t i = 0; i < MPU_QUEUE_LENGTH; i++) {
-		x[i] = filteredAccel[i].x;
+		x[i] = filtQueue->queue[i].x;
+		y[i] = filtQueue->queue[i].y;
+		z[i] = filtQueue->queue[i].z;
 	}
 
-	return samples_equivalence_test(&x, comp_seq, MPU_QUEUE_LENGTH, 0.0000001);
+	return samples_equivalence_test(x, comp_seq, MPU_QUEUE_LENGTH, 0.0000001) ||
+			samples_equivalence_test(y, comp_seq, MPU_QUEUE_LENGTH, 0.0000001) ||
+			samples_equivalence_test(z, comp_seq, MPU_QUEUE_LENGTH, 0.0000001);
 }
 
-void IMU_LP_Filter() {
-//filter gyro
+void IMU_LP_Filter_calc_next(StructQueue *rawQueue, StructQueue *filtQueue) {
 
-//	//This will be the new filtered sample
-//	Axes3 gyroFilteredNew = { 0 };
-//
-//	//A struct that contain the tree
-//	Axes3 gyroFilt[3] = { 0 };
-//	Axes3 gyroRaw[3] = { 0 };
-////	for(int i = 0; i < 4 ; i++){
-////		LeaveStructQueue(&gyroFilteredQueue, &gyroFilt[i], i);
-////		LeaveStructQueue(&gyro , &gyroRaw[i], i);
-////	}
-//
-//	//filter x
-//	gyroFilteredNew.x = A * gyroRaw[2].x + B * gyroRaw[1].x + C * gyroRaw[0].x
-//			+ D * gyroFilt[2].x + E * gyroFilt[1].x + F * gyroFilt[0].x;
-//	//filter y
-//	gyroFilteredNew.y = A * gyroRaw[2].y + B * gyroRaw[1].y + C * gyroRaw[0].y
-//			+ D * gyroFilt[2].y + E * gyroFilt[1].y + F * gyroFilt[0].y;
-//	//filter z
-//	gyroFilteredNew.z = A * gyroRaw[2].z + B * gyroRaw[1].z + C * gyroRaw[0].z
-//			+ D * gyroFilt[2].z + E * gyroFilt[1].z + F * gyroFilt[0].z;
-//
-//	EnterStructQueue(&gyroFilteredQueue, &gyroFilteredNew);
-//filter accel
-//This will be the new filtered sample
-Axes3 accelFilteredNew = { 0 };
+	//This will be the new filtered sample
+	Axes3 next = { 0 };
 
-//A struct that contain the tree
-Axes3 accelFilt[3] = { 0 };
-Axes3 accelRaw[3] = { 0 };
+	//A struct that contain the tree
+	Axes3 filtered[3] = { 0 };
+	Axes3 raw[3] = { 0 };
 
-// Iterate through queue starting with the most recent value
-// accelRaw[0] will be the most recent
-for (int8_t i = 0; i < 3; i++) {
-	int srcIndex = ((accel.pointWR) - 1 - i);
-	if (srcIndex < 0)
-		srcIndex += accel.queueLength;
-	accelRaw[i] = accel.queue[srcIndex];
-}
+	// Iterate through queue starting with the most recent value
+	// raw[0] will be the most recent
+	for (int8_t i = 0; i < 3; i++) {
+		int srcIndex = ((rawQueue->pointWR) - 1 - i);
+		while (srcIndex < 0)
+			srcIndex += rawQueue->queueLength;
+		raw[i] = rawQueue->queue[srcIndex];
+	}
 
-// Iterate through queue starting with the most recent value
-// accelFilt[0] will be the most recent
-for (int8_t i = 0; i < 3; i++) {
-	int srcIndex = ((accelFilteredQueue.pointWR) - 1 - i);
-	if (srcIndex < 0)
-		srcIndex += accelFilteredQueue.queueLength;
-	accelFilt[i] = accelFilteredQueue.queue[srcIndex];
-}
+	// Iterate through queue starting with the most recent value
+	// filtered[0] will be the most recent
+	for (int8_t i = 0; i < 3; i++) {
+		int srcIndex = ((filtQueue->pointWR) - 1 - i);
+		while (srcIndex < 0)
+			srcIndex += filtQueue->queueLength;
+		filtered[i] = filtQueue->queue[srcIndex];
+	}
 
-accelFilteredNew.x = LP_filter(accelRaw[2].x, accelRaw[1].x, accelRaw[0].x,
-		accelFilt[2].x, accelFilt[1].x, accelFilt[0].x);
-accelFilteredNew.y = LP_filter(accelRaw[2].y, accelRaw[1].y, accelRaw[0].y,
-		accelFilt[2].y, accelFilt[1].y, accelFilt[0].y);
-accelFilteredNew.z = LP_filter(accelRaw[2].z, accelRaw[1].z, accelRaw[0].z,
-		accelFilt[2].z, accelFilt[1].z, accelFilt[0].z);
+	next.x = LP_filter(raw[2].x, raw[1].x, raw[0].x,
+			filtered[2].x, filtered[1].x, filtered[0].x);
+	next.y = LP_filter(raw[2].y, raw[1].y, raw[0].y,
+			filtered[2].y, filtered[1].y, filtered[0].y);
+	next.z = LP_filter(raw[2].z, raw[1].z, raw[0].z,
+			filtered[2].z, filtered[1].z, filtered[0].z);
 
-//filter x
-//	accelFilteredNew.x = A * accelRaw[2].x + B * accelRaw[1].x
-//			+ C * accelRaw[0].x + D * accelFilt[2].x + E * accelFilt[1].x
-//			+ F * accelFilt[0].x;
-//	//filter y
-//	accelFilteredNew.y = A * accelRaw[2].y + B * accelRaw[1].y
-//			+ C * accelRaw[0].y + D * accelFilt[2].y + E * accelFilt[1].y
-//			+ F * accelFilt[0].y;
-//	//filter z
-//	accelFilteredNew.z = A * accelRaw[2].z + B * accelRaw[1].z
-//			+ C * accelRaw[0].z + D * accelFilt[2].z + E * accelFilt[1].z
-//			+ F * accelFilt[0].z;
-
-EnterStructQueue(&accelFilteredQueue, &accelFilteredNew);
+	EnterStructQueue(filtQueue, &next);
 }
 
 /* USER CODE END 4 */
@@ -1313,12 +1276,12 @@ EnterStructQueue(&accelFilteredQueue, &accelFilteredNew);
  * @retval None
  */
 void Error_Handler(void) {
-/* USER CODE BEGIN Error_Handler_Debug */
-/* User can add his own implementation to report the HAL error return state */
-__disable_irq();
-while (1) {
-}
-/* USER CODE END Error_Handler_Debug */
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
