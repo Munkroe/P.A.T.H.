@@ -1,3 +1,5 @@
 MotorController/Debug/*
 .metadata/*
 MotorController/.settings/*
+.DS_Store
+*/.DS_Store

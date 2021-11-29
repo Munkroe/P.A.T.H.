@@ -32,6 +32,15 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "microsecond_counter.h"
+#include "DCMotorDriver.h"
+#include "comm_relay.h"
+#include "math.h"
+#include "stdbool.h"
+#include "MPU6050.h"
+#include "circle_queue_struct.h"
+#include "circle_queue.h"
+#include "orientation.h"
 
 /* USER CODE END Includes */
 
@@ -56,7 +65,9 @@ typedef struct MotorController {
 	float reference;
 	float measAngVel;
 	float lastError;
-	float voltage;
+
+	float controlVoltage;
+	float driveVoltage;
 	Motor *motor;
 	MotorEncoder *Encoder;
 } MotorController;

@@ -10,6 +10,11 @@ uint8_t angularPosition[5] = { 0 };
 float angularResolution = 360.0/TOPENCODERRESOLUTION;
 
 
+void orientation_reset() {
+	orientIncrement = 0;
+	orientAngle = 0.0f;
+}
+
 void calcOrientOutput() {
 	 orientAngle = (orientIncrement % TOPENCODERRESOLUTION) * angularResolution; // Antallet af målte inkrementer ganges med hvor stor en grad hver inkrement er
  }
@@ -61,13 +66,13 @@ void checkOrientCounterClock() { //B
 //}
 
 void sendOrientData() {
-	if (spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle) {
+	if (1/*spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle*/) {
 		spamCheckDirOrient = directionOrient;
 		spamCheckOrientAngle = orientAngle;
 		packOrient();
 		memset(packedOrientData, 0, sizeof(packedOrientData));
 
-		to_frame(packedOrientData, angularPosition, ORIENTID);
+		to_frame(packedOrientData, angularPosition, UART_ID_ORIENTATION);
 		HAL_UART_Transmit(&huart2, packedOrientData, sizeof(packedOrientData), HAL_MAX_DELAY);
 	}
 }
