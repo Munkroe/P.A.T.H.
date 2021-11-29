@@ -33,6 +33,14 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "frame_comm.h"
+#include "microsecond_counter.h"
+#include "DCMotorDriver.h"
+#include "math.h"
+#include "stdbool.h"
+#include "MPU6050.h"
+#include "circle_queue_struct.h"
+#include "circle_queue.h"
+#include "orientation.h"
 
 /* USER CODE END Includes */
 
@@ -57,6 +65,7 @@ typedef struct MotorController {
 	float reference;
 	float measAngVel;
 	float lastError;
+
 	float controlVoltage;
 	float driveVoltage;
 	Motor *motor;
@@ -91,13 +100,14 @@ void reset_odometry();
 /* Private defines -----------------------------------------------------------*/
 #define BatteryVoltage_Pin GPIO_PIN_3
 #define BatteryVoltage_GPIO_Port GPIOA
+#define Motor_counterclock_right_Pin GPIO_PIN_4
+#define Motor_counterclock_right_GPIO_Port GPIOA
+#define Motor_counterclock_right_EXTI_IRQn EXTI4_IRQn
 #define Motor_Left_clock_Pin GPIO_PIN_5
 #define Motor_Left_clock_GPIO_Port GPIOA
 #define Motor_Left_clock_EXTI_IRQn EXTI9_5_IRQn
 #define DIR_L1_Pin GPIO_PIN_6
 #define DIR_L1_GPIO_Port GPIOA
-#define DIR_L2_Pin GPIO_PIN_7
-#define DIR_L2_GPIO_Port GPIOA
 #define motor_Right_clock_Pin GPIO_PIN_0
 #define motor_Right_clock_GPIO_Port GPIOB
 #define motor_Right_clock_EXTI_IRQn EXTI0_IRQn
@@ -113,12 +123,11 @@ void reset_odometry();
 #define orientation_counterclock_Pin GPIO_PIN_11
 #define orientation_counterclock_GPIO_Port GPIOA
 #define orientation_counterclock_EXTI_IRQn EXTI15_10_IRQn
+#define DIR_L2_Pin GPIO_PIN_12
+#define DIR_L2_GPIO_Port GPIOA
 #define orientation_clock_Pin GPIO_PIN_3
 #define orientation_clock_GPIO_Port GPIOB
 #define orientation_clock_EXTI_IRQn EXTI3_IRQn
-#define Motor_counterclock_right_Pin GPIO_PIN_4
-#define Motor_counterclock_right_GPIO_Port GPIOB
-#define Motor_counterclock_right_EXTI_IRQn EXTI4_IRQn
 #define DIR_R1_Pin GPIO_PIN_6
 #define DIR_R1_GPIO_Port GPIOB
 #define DIR_R2_Pin GPIO_PIN_7

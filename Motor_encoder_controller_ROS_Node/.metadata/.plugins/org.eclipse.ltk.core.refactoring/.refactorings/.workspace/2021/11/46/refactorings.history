@@ -1,3 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<session version="1.0">&#x0A;<refactoring comment="Delete resource &apos;MotorController/Core/Src/main.c&apos;" deleteContents="false" description="Delete resource &apos;MotorController/Core/Src/main.c&apos;" element1="/MotorController/Core/Src/main.c" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1637140190180"/>&#x0A;<refactoring comment="Delete resource &apos;MotorController/Core/Src/orientation.c&apos;" deleteContents="false" description="Delete resource &apos;MotorController/Core/Src/orientation.c&apos;" element1="/MotorController/Core/Src/orientation.c" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1637140194072"/>
-</session>

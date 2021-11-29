@@ -22,9 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "math.h"
-#include "stdbool.h"
-#include "orientation.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +35,8 @@
 
 #define RIGHT_MOTOR_CHANNEL TIM_CHANNEL_1
 #define LEFT_MOTOR_CHANNEL TIM_CHANNEL_2
+
+#define MPU_QUEUE_LENGTH 3
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
@@ -58,6 +58,8 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+I2C_HandleTypeDef hi2c3;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
@@ -73,6 +75,49 @@ UartCommHandler rxHandler;
 
 char uart_txbuffer[UART_IN_BUF_SIZE] = { 0 };
 UartCommHandler txHandler;
+
+//I2C variables
+
+uint8_t MPU_in[1] = { MPU_GyroOut };
+uint8_t MPU_out[6] = { 0 };
+volatile uint8_t globalDMAFlag = 0;
+Axes3 accelQueue[MPU_QUEUE_LENGTH] = { 0 };
+Axes3 gyroQueue[MPU_QUEUE_LENGTH] = { 0 };
+StructQueue accel = { .pointRD = 0, .pointWR = 0, .queue = accelQueue,
+		.queueLength = MPU_QUEUE_LENGTH };
+StructQueue gyro = { .pointRD = 0, .pointWR = 0, .queue = gyroQueue,
+		.queueLength = MPU_QUEUE_LENGTH };
+
+//LP filter coefficients. Calculate based on T and W_c
+float A = 0.211376056536034;
+float B = 0.581295066636667;
+float C = 0;
+float D = 0.043213918263772;
+float E = -0.247478160354501;
+float F = 0.398367669019004;
+
+//float A = 0.0000018977;
+//float B = 0.0000019177;
+//float C = 0;
+//float D = 0.9691;
+//float E = -2.9377;
+//float F = 2.9686;
+
+Axes3 filteredAccel[MPU_QUEUE_LENGTH] = { 0 };
+Axes3 filteredGyro[MPU_QUEUE_LENGTH] = { 0 };
+StructQueue accelFilteredQueue = { .pointRD = 0, .pointWR = 0, .queue =
+		filteredAccel, .queueLength = MPU_QUEUE_LENGTH };
+StructQueue gyroFilteredQueue = { .pointRD = 0, .pointWR = 0, .queue =
+		filteredGyro, .queueLength = MPU_QUEUE_LENGTH };
+
+// Known filter response sequences
+float filt_resp_f250_kf250[20] = { 0, 0, 0.581295066636667, 0.442945217244330,
+		-0.548697846654317, -0.514458768708141, 0.531283458233830,
+		0.526628135142305, -0.525216276051722, -0.527975362294529,
+		0.523703975232896, 0.527968506554599, -0.523390663877524,
+		-0.527907349238351, 0.523337192993811, 0.527884452478231,
+		-0.523330438599569, -0.527878405984266, 0.523330186303493,
+		/*0.527876100986305};*/0.527877100986305 };
 
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
@@ -111,6 +156,10 @@ Motor motorL;
 MotorEncoder encoderL;
 MotorController controllerL;
 
+uint32_t ticks = 0;
+uint32_t ticks_ms = 0;
+uint32_t laps_c = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -123,7 +172,15 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_I2C3_Init(void);
 /* USER CODE BEGIN PFP */
+
+float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
+		float y_old1);
+int8_t samples_equivalence_test(float *a, float *b, uint32_t len,
+		float tolerance);
+int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
+		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue);
 
 void packThe6Floats();
 
@@ -173,6 +230,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM7_Init();
   MX_TIM2_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
 
 	positionCalculationPeriod = ((htim6.Instance->ARR + 1)
@@ -188,18 +246,36 @@ int main(void)
 
 	reset_odometry();
 
+	if (!micros_init(&htim2, HAL_RCC_GetPCLK1Freq()))
+		Error_Handler();
+
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim6);
 	HAL_TIM_Base_Start_IT(&htim7);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
+
+	while (MPU_Init(&hi2c3) != HAL_OK) {
+
+	}
+
+	HAL_StatusTypeDef returnValue = HAL_I2C_Master_Transmit_IT(&hi2c3,
+			MPU_Address << 1, &MPU_GyroOut, 1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+//	// Compare filter response to 20 known output samples
+//	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
+//		Error_Handler();
+//	}
+
 	while (1) {
+
+		//IMU_LP_Filter();
 
     /* USER CODE END WHILE */
 
@@ -309,6 +385,52 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 	__HAL_RCC_ADC_CLK_ENABLE();
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief I2C3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C3_Init(void)
+{
+
+  /* USER CODE BEGIN I2C3_Init 0 */
+
+  /* USER CODE END I2C3_Init 0 */
+
+  /* USER CODE BEGIN I2C3_Init 1 */
+
+  /* USER CODE END I2C3_Init 1 */
+  hi2c3.Instance = I2C3;
+  hi2c3.Init.Timing = 0x00702991;
+  hi2c3.Init.OwnAddress1 = 0;
+  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c3.Init.OwnAddress2 = 0;
+  hi2c3.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C3_Init 2 */
+
+  /* USER CODE END I2C3_Init 2 */
 
 }
 
@@ -541,6 +663,7 @@ static void MX_USART2_UART_Init(void)
   }
   /* USER CODE BEGIN USART2_Init 2 */
 
+
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -578,26 +701,26 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, DIR_L1_Pin|DIR_L2_Pin|testLED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DIR_L1_Pin|testLED_Pin|DIR_L2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DIR_R1_Pin|DIR_R2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : Motor_Left_clock_Pin orientation_counterclock_Pin */
-  GPIO_InitStruct.Pin = Motor_Left_clock_Pin|orientation_counterclock_Pin;
+  /*Configure GPIO pins : Motor_counterclock_right_Pin Motor_Left_clock_Pin orientation_counterclock_Pin */
+  GPIO_InitStruct.Pin = Motor_counterclock_right_Pin|Motor_Left_clock_Pin|orientation_counterclock_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DIR_L1_Pin DIR_L2_Pin testLED_Pin */
-  GPIO_InitStruct.Pin = DIR_L1_Pin|DIR_L2_Pin|testLED_Pin;
+  /*Configure GPIO pins : DIR_L1_Pin testLED_Pin DIR_L2_Pin */
+  GPIO_InitStruct.Pin = DIR_L1_Pin|testLED_Pin|DIR_L2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : motor_Right_clock_Pin Motor_left_counterclock_Pin orientation_clock_Pin Motor_counterclock_right_Pin */
-  GPIO_InitStruct.Pin = motor_Right_clock_Pin|Motor_left_counterclock_Pin|orientation_clock_Pin|Motor_counterclock_right_Pin;
+  /*Configure GPIO pins : motor_Right_clock_Pin Motor_left_counterclock_Pin orientation_clock_Pin */
+  GPIO_InitStruct.Pin = motor_Right_clock_Pin|Motor_left_counterclock_Pin|orientation_clock_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -632,20 +755,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void reset_odometry() {
-	// Motor Initialization
-	motor_init(&motorR, 'R');
-	motor_init(&motorL, 'L');
-
-	motorEncoder_init(&encoderR);
-	motorEncoder_init(&encoderL);
-
-	motorController_init(&controllerR, &motorR, &encoderR);
-	motorController_init(&controllerL, &motorL, &encoderL);
-
-	orientation_reset();
-}
-
 void motor_init(Motor *m, char name) {
 	m->name = name;
 	m->direction = 0;
@@ -670,7 +779,6 @@ void motorController_init(MotorController *c, Motor *m, MotorEncoder *e) {
 }
 
 void uart_init() {
-
 
 	// Initialize RX
 	rxHandler.direction = DIRECTION_RX;
@@ -719,6 +827,7 @@ int8_t uart_in_handle_reference(char *uart_msg, uint32_t len) {
 	// Retrieve reference for right wheel
 	if (uart_msg[0] == 'R') {
 		memcpy(&controllerR.reference, uart_msg + 1, 4);
+
 	} else
 		return 0;
 
@@ -762,7 +871,9 @@ void updatePositionsAndVelocities() {
 
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
+	sendPositionAndVelocity();
 
+	// TODO: Removed comments
 	if (1/*spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi*/) {
 		spamCheckX = posX;
 		spamCheckY = posY;
@@ -781,6 +892,7 @@ void packThe6Floats() {
 	for (int i = 0; i < 4; i++) {
 		position[i] = *(pointer + i);
 	}
+
 	pointer = &posY;
 	for (int k = 4; k < 8; k++) {
 		position[k] = *(pointer + k - 4);
@@ -789,11 +901,11 @@ void packThe6Floats() {
 	for (int j = 8; j < 12; j++) {
 		position[j] = *(pointer + j - 8);
 	}
-	pointer = &controllerL.Encoder->output;
+	pointer = &velX; //&controllerL.Encoder->output;
 	for (int m = 12; m < 16; m++) {
 		position[m] = *(pointer + m - 12);
 	}
-	pointer = &controllerR.Encoder->output;
+	pointer = &velY; //&controllerR.Encoder->output;
 	for (int n = 16; n < 20; n++) {
 		position[n] = *(pointer + n - 16);
 	}
@@ -1031,6 +1143,7 @@ void controller(MotorController *c) {
 	// Measure the angular velocity (feedback)
 	updateAngularVelocity(c);
 
+
 	// Calculate next controlVoltage according to the controller design
 	nextVoltage(c);
 
@@ -1044,9 +1157,12 @@ void controller(MotorController *c) {
 }
 
 void controlBothMotors() {
+	uint32_t micros_start = micros();
 	uart_rxhandle(&rxHandler);
 	controller(&controllerR);
 	controller(&controllerL);
+	uint32_t micros_end = micros();
+	uint32_t deltaT = micros_end - micros_start;
 }
 
 void UpdateBatteryVoltage() {
@@ -1054,6 +1170,174 @@ void UpdateBatteryVoltage() {
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // Wait for conversion to complete
 	uint32_t adc_val = HAL_ADC_GetValue(&hadc1); // Get the ADC value
 	batteryVoltage = adc_val * voltageMeasScaling;
+}
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if (globalDMAFlag == 0) {
+		HAL_I2C_Master_Receive_IT(&hi2c3, MPU_Address << 1, MPU_out, 6);
+		globalDMAFlag = 1;
+	} else {
+		HAL_I2C_Master_Receive_IT(&hi2c3, MPU_Address << 1, MPU_out, 6);
+		globalDMAFlag = 0;
+	}
+
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if (globalDMAFlag == 1) {
+		int16_t rawGyroData_X = 0;
+		int16_t rawGyroData_Y = 0;
+		int16_t rawGyroData_Z = 0;
+
+		Axes3 newMPUData;
+
+		float sensitivity = 0.0f;
+
+		if (GYRO_CONFIG_SCALE == 0x00)
+			sensitivity = 131.0;
+		if (GYRO_CONFIG_SCALE == 0x08)
+			sensitivity = 65.5;
+		if (GYRO_CONFIG_SCALE == 0x10)
+			sensitivity = 32.8;
+		if (GYRO_CONFIG_SCALE == 0x18)
+			sensitivity = 16.4;
+
+		// Data composition from raw data
+		rawGyroData_X = ((int16_t) MPU_out[0] << 8 | MPU_out[1]);
+		rawGyroData_Y = ((int16_t) MPU_out[2] << 8 | MPU_out[3]);
+		rawGyroData_Z = ((int16_t) MPU_out[4] << 8 | MPU_out[5]);
+
+		newMPUData.x = (float) rawGyroData_X / sensitivity;
+		newMPUData.y = (float) rawGyroData_Y / sensitivity;
+		newMPUData.z = (float) rawGyroData_Z / sensitivity;
+		EnterStructQueue(&gyro, &newMPUData);
+
+		IMU_LP_Filter_calc_next(&gyro, &gyroFilteredQueue);
+
+		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1);
+
+	} else {
+		int16_t rawAccelData_X;
+		int16_t rawAccelData_Y;
+		int16_t rawAccelData_Z;
+
+		Axes3 newMPUData;
+
+		float sensitivity;
+
+		if (ACCEL_CONFIG_SCALE == 0x00)
+			sensitivity = 16384.0;
+		if (ACCEL_CONFIG_SCALE == 0x08)
+			sensitivity = 8192.0;
+		if (ACCEL_CONFIG_SCALE == 0x10)
+			sensitivity = 4096.0;
+		if (ACCEL_CONFIG_SCALE == 0x18)
+			sensitivity = 2048.0;
+
+		// Data composition from raw data
+		rawAccelData_X = ((int16_t) MPU_out[0] << 8 | MPU_out[1]);
+		rawAccelData_Y = ((int16_t) MPU_out[2] << 8 | MPU_out[3]);
+		rawAccelData_Z = ((int16_t) MPU_out[4] << 8 | MPU_out[5]);
+
+		newMPUData.x = (float) rawAccelData_X / sensitivity;
+		newMPUData.y = (float) rawAccelData_Y / sensitivity;
+		newMPUData.z = (float) rawAccelData_Z / sensitivity;
+		EnterStructQueue(&accel, &newMPUData);
+
+		IMU_LP_Filter_calc_next(&accel, &accelFilteredQueue);
+
+		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
+		globalDMAFlag = 0;
+	}
+}
+
+int8_t samples_equivalence_test(float *a, float *b, uint32_t len,
+		float tolerance) {
+	for (uint32_t i = 0; i < len; i++) {
+		float diff = a[i] - b[i];
+		if (diff < 0)
+			diff = -diff; // Make sign positive
+		if (!(diff <= tolerance))
+			return 0;
+	}
+
+	return 1;
+}
+
+float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
+		float y_old1) {
+	return A * x_old2 + B * x_old1 + C * x + D * y_old3 + E * y_old2
+			+ F * y_old1;
+}
+
+int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
+		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue) {
+	double sample_time = 1.0 / sample_freq;
+
+	if (MPU_QUEUE_LENGTH != 20) Error_Handler();
+
+	for (uint32_t i = 0; i < MPU_QUEUE_LENGTH; i++) {
+
+		// Generate input sequence
+		double val = sin(2.0 * M_PI * signal_freq * i * sample_time);
+		Axes3 axisVal = { val, val, val };
+		EnterStructQueue(rawQueue, &axisVal);
+
+		// Compute output sequence
+		IMU_LP_Filter_calc_next(rawQueue, filtQueue);
+	}
+
+	// Compare output sequences
+	float x[MPU_QUEUE_LENGTH] = { 0 };
+	float y[MPU_QUEUE_LENGTH] = { 0 };
+	float z[MPU_QUEUE_LENGTH] = { 0 };
+
+	for (uint32_t i = 0; i < MPU_QUEUE_LENGTH; i++) {
+		x[i] = filtQueue->queue[i].x;
+		y[i] = filtQueue->queue[i].y;
+		z[i] = filtQueue->queue[i].z;
+	}
+
+	return samples_equivalence_test(x, comp_seq, MPU_QUEUE_LENGTH, 0.0000001) ||
+			samples_equivalence_test(y, comp_seq, MPU_QUEUE_LENGTH, 0.0000001) ||
+			samples_equivalence_test(z, comp_seq, MPU_QUEUE_LENGTH, 0.0000001);
+}
+
+void IMU_LP_Filter_calc_next(StructQueue *rawQueue, StructQueue *filtQueue) {
+
+	//This will be the new filtered sample
+	Axes3 next = { 0 };
+
+	//A struct that contain the tree
+	Axes3 filtered[3] = { 0 };
+	Axes3 raw[3] = { 0 };
+
+	// Iterate through queue starting with the most recent value
+	// raw[0] will be the most recent
+	for (int8_t i = 0; i < 3; i++) {
+		int srcIndex = ((rawQueue->pointWR) - 1 - i);
+		while (srcIndex < 0)
+			srcIndex += rawQueue->queueLength;
+		raw[i] = rawQueue->queue[srcIndex];
+	}
+
+	// Iterate through queue starting with the most recent value
+	// filtered[0] will be the most recent
+	for (int8_t i = 0; i < 3; i++) {
+		int srcIndex = ((filtQueue->pointWR) - 1 - i);
+		while (srcIndex < 0)
+			srcIndex += filtQueue->queueLength;
+		filtered[i] = filtQueue->queue[srcIndex];
+	}
+
+	next.x = LP_filter(raw[2].x, raw[1].x, raw[0].x,
+			filtered[2].x, filtered[1].x, filtered[0].x);
+	next.y = LP_filter(raw[2].y, raw[1].y, raw[0].y,
+			filtered[2].y, filtered[1].y, filtered[0].y);
+	next.z = LP_filter(raw[2].z, raw[1].z, raw[0].z,
+			filtered[2].z, filtered[1].z, filtered[0].z);
+
+	EnterStructQueue(filtQueue, &next);
 }
 
 /* USER CODE END 4 */
