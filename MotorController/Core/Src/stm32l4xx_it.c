@@ -61,6 +61,7 @@ uint32_t s, e, d;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern I2C_HandleTypeDef hi2c3;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
@@ -216,7 +217,7 @@ void EXTI0_IRQHandler(void)
   /* USER CODE BEGIN EXTI0_IRQn 0 */
 
   /* USER CODE END EXTI0_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+  HAL_GPIO_EXTI_IRQHandler(motor_Right_clock_Pin);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
 	clockcheckRight();
   /* USER CODE END EXTI0_IRQn 1 */
@@ -230,7 +231,7 @@ void EXTI1_IRQHandler(void)
   /* USER CODE BEGIN EXTI1_IRQn 0 */
 
   /* USER CODE END EXTI1_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
+  HAL_GPIO_EXTI_IRQHandler(Motor_left_counterclock_Pin);
   /* USER CODE BEGIN EXTI1_IRQn 1 */
 	clockcheckLeft();
   /* USER CODE END EXTI1_IRQn 1 */
@@ -244,7 +245,7 @@ void EXTI3_IRQHandler(void)
   /* USER CODE BEGIN EXTI3_IRQn 0 */
 
   /* USER CODE END EXTI3_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+  HAL_GPIO_EXTI_IRQHandler(BatteryVoltage_Pin);
   /* USER CODE BEGIN EXTI3_IRQn 1 */
 	checkOrientClock();
   /* USER CODE END EXTI3_IRQn 1 */
@@ -258,7 +259,7 @@ void EXTI4_IRQHandler(void)
   /* USER CODE BEGIN EXTI4_IRQn 0 */
 
   /* USER CODE END EXTI4_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
+  HAL_GPIO_EXTI_IRQHandler(Motor_counterclock_right_Pin);
   /* USER CODE BEGIN EXTI4_IRQn 1 */
 	counterclockcheckRight();
   /* USER CODE END EXTI4_IRQn 1 */
@@ -304,7 +305,7 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
 
   /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5);
+  HAL_GPIO_EXTI_IRQHandler(Motor_Left_clock_Pin);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 	uint32_t s = micros();
 	counterclockcheckLeft();
@@ -352,7 +353,7 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
 
   /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_11);
+  HAL_GPIO_EXTI_IRQHandler(orientation_counterclock_Pin);
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 	checkOrientCounterClock();
   /* USER CODE END EXTI15_10_IRQn 1 */
@@ -393,7 +394,21 @@ void TIM7_IRQHandler(void)
   /* USER CODE END TIM7_IRQn 1 */
 }
 
+/**
+  * @brief This function handles I2C3 event interrupt.
+  */
+void I2C3_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C3_EV_IRQn 0 */
+
+  /* USER CODE END I2C3_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c3);
+  /* USER CODE BEGIN I2C3_EV_IRQn 1 */
+
+  /* USER CODE END I2C3_EV_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+

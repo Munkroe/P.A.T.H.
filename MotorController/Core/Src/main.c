@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "circle_queue_struct.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -1197,7 +1199,13 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
 }
 
+uint32_t last_dur = 0;
+uint32_t counter_s = 0;
+
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	counter_s++;
+	uint32_t time_s = micros();
+
 	if (globalDMAFlag == 1) {
 		int16_t rawGyroData_X = 0;
 		int16_t rawGyroData_Y = 0;
@@ -1263,6 +1271,9 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
 	}
+
+	uint32_t time_e = micros();
+	last_dur = time_e-time_s;
 }
 
 int8_t samples_equivalence_test(float *a, float *b, uint32_t len,
@@ -1387,4 +1398,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

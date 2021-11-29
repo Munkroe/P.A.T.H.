@@ -32,15 +32,14 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "frame_comm.h"
-#include "microsecond_counter.h"
-#include "DCMotorDriver.h"
-#include "math.h"
 #include "stdbool.h"
-#include "MPU6050.h"
-#include "circle_queue_struct.h"
-#include "circle_queue.h"
+#include "math.h"
+#include "microsecond_counter.h"
 #include "orientation.h"
+#include "frame_comm.h"
+#include "MPU6050.h"
+
+
 
 /* USER CODE END Includes */
 
@@ -141,5 +140,3 @@ void reset_odometry();
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

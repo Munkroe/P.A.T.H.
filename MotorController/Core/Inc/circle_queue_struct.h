@@ -8,12 +8,6 @@
 #ifndef CIRCLE_QUEUE_STRUCT_H
 #define CIRCLE_QUEUE_STRUCT_H
 
-
-#include <stdint.h>
-#include "stdio.h"
-#include "string.h"
-#include <stdlib.h>
-#include "stm32l4xx_hal.h"
 #include "MPU6050.h"
 
 //struct CAN_QUEUE_DATA {
