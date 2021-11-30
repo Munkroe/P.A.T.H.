@@ -68,12 +68,12 @@ void checkOrientCounterClock() { //B
 //}
 
 void sendOrientData() {
-	if (spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle) {
-		spamCheckDirOrient = directionOrient;
-		spamCheckOrientAngle = orientAngle;
+	//if (spamCheckDirOrient != directionOrient || spamCheckOrientAngle != orientAngle) {
+	//	spamCheckDirOrient = directionOrient;
+	//	spamCheckOrientAngle = orientAngle;
 		packOrient();
 
 		uart_transmit(&txHandler, angularPosition, sizeof(angularPosition), UART_ID_ORIENTATION);
 		memset(angularPosition, 0, sizeof(angularPosition));
-	}
+	//}
 }

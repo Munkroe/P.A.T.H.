@@ -878,12 +878,12 @@ void updatePositionsAndVelocities() {
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
 
-	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
-		spamCheckX = posX;
-		spamCheckY = posY;
-		spamCheckPhi = posPhi;
+	//if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
+	//	spamCheckX = posX;
+	//	spamCheckY = posY;
+	//	spamCheckPhi = posPhi;
 		sendPositionAndVelocity();
-	}
+	//}
 
 	// Encoder data from top plate
 	calcOrientOutput();
