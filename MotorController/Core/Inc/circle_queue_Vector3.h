@@ -18,14 +18,16 @@
 
 typedef struct StructQueue {
 	uint16_t pointRD, pointWR, queueLength;
-	Axes3* queue;
+	Vector3* queue;
 } StructQueue;
 
 
 int StructQueueFull(StructQueue *q);
 int StructQueueEmpty(StructQueue *q);
-int EnterStructQueue(StructQueue *q, Axes3 *data);
-int LeaveStructQueue(StructQueue *q, Axes3 *data, uint8_t backtrack);
+int EnterStructQueue(StructQueue *q, Vector3 *data);
+int LeaveStructQueue(StructQueue *q, Vector3 *data, uint8_t backtrack);
+int NewestEntryIndex(StructQueue *q);
+int RecentEntryIndex(StructQueue *q, int offset);
 int UnreadElements(StructQueue *q);
 
 #endif /* CIRCLE_QUEUE_STRUCT */

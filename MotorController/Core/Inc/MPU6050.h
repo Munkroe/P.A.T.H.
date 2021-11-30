@@ -37,15 +37,15 @@ typedef struct {
 	float x;
 	float y;
 	float z;
-} Axes3;
+} Vector3;
 
 HAL_StatusTypeDef MPU_Init(I2C_HandleTypeDef * I2C_handler);
 
 float MPU_Read_Temp();
 
-Axes3 MPU_Read_Gyro();
+Vector3 MPU_Read_Gyro();
 
-Axes3 MPU_Read_Accel();
+Vector3 MPU_Read_Accel();
 
 void MPU6050();
 

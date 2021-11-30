@@ -9,8 +9,8 @@
 
 
 float tempVal = 0.0;
-Axes3 resultGyro = { 0 };
-Axes3 resultAccel = { 0 };
+Vector3 resultGyro = { 0 };
+Vector3 resultAccel = { 0 };
 
 I2C_HandleTypeDef *hi2c;
 
@@ -90,7 +90,7 @@ float MPU_Read_Temp() {
 	return tempVal;
 }
 
-Axes3 MPU_Read_Gyro() {
+Vector3 MPU_Read_Gyro() {
 	int16_t rawGyroData_X = 0;
 	int16_t rawGyroData_Y = 0;
 	int16_t rawGyroData_Z = 0;
@@ -125,7 +125,7 @@ Axes3 MPU_Read_Gyro() {
 	return resultGyro;
 }
 
-Axes3 MPU_Read_Accel() {
+Vector3 MPU_Read_Accel() {
 	int16_t rawAccelData_X;
 	int16_t rawAccelData_Y;
 	int16_t rawAccelData_Z;

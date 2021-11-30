@@ -18,12 +18,12 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <circle_queue_Vector3.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "circle_queue_struct.h"
 
 /* USER CODE END Includes */
 
@@ -37,18 +37,6 @@
 
 #define RIGHT_MOTOR_CHANNEL TIM_CHANNEL_1
 #define LEFT_MOTOR_CHANNEL TIM_CHANNEL_2
-
-#define MPU_QUEUE_LENGTH 3
-#define WHEELDIA 0.085
-#define DISBETWHEEL 0.3637
-#define TOTAL_WHEEL_TICKS 1920
-#define UART_IN_BUF_SIZE 256
-#define MOTOR_VOLTAGE_MAX 13.0
-#define MOTOR_VOLTAGE_STALL 2.5
-#define MOTOR_ANGULAR_VELOCITY_MIN 0.001
-#define UART_ID_MOTOR 2
-#define MOTOR_VOLTAGE_OFFSET 0 // 5
-#define MOTOR_VELOCITY_DEADZONE 0.01
 
 /* USER CODE END PD */
 
@@ -83,11 +71,11 @@ UartCommHandler txHandler;
 uint8_t MPU_in[1] = { MPU_GyroOut };
 uint8_t MPU_out[6] = { 0 };
 volatile uint8_t globalDMAFlag = 0;
-Axes3 accelQueue[MPU_QUEUE_LENGTH] = { 0 };
-Axes3 gyroQueue[MPU_QUEUE_LENGTH] = { 0 };
-StructQueue accel = { .pointRD = 0, .pointWR = 0, .queue = accelQueue,
+Vector3 accelRawArr[MPU_QUEUE_LENGTH] = { 0 };
+Vector3 gyroRawArr[MPU_QUEUE_LENGTH] = { 0 };
+StructQueue accelRawQueue = { .pointRD = 0, .pointWR = 0, .queue = accelRawArr,
 		.queueLength = MPU_QUEUE_LENGTH };
-StructQueue gyro = { .pointRD = 0, .pointWR = 0, .queue = gyroQueue,
+StructQueue gyroRawQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroRawArr,
 		.queueLength = MPU_QUEUE_LENGTH };
 
 //LP filter coefficients. Calculate based on T and W_c
@@ -105,12 +93,12 @@ float F = 0.398367669019004;
 //float E = -2.9377;
 //float F = 2.9686;
 
-Axes3 filteredAccel[MPU_QUEUE_LENGTH] = { 0 };
-Axes3 filteredGyro[MPU_QUEUE_LENGTH] = { 0 };
-StructQueue accelFilteredQueue = { .pointRD = 0, .pointWR = 0, .queue =
-		filteredAccel, .queueLength = MPU_QUEUE_LENGTH };
-StructQueue gyroFilteredQueue = { .pointRD = 0, .pointWR = 0, .queue =
-		filteredGyro, .queueLength = MPU_QUEUE_LENGTH };
+Vector3 accelFiltArr[MPU_QUEUE_LENGTH] = { 0 };
+Vector3 gyroFiltArr[MPU_QUEUE_LENGTH] = { 0 };
+StructQueue accelFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
+		accelFiltArr, .queueLength = MPU_QUEUE_LENGTH };
+StructQueue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
+		gyroFiltArr, .queueLength = MPU_QUEUE_LENGTH };
 
 // Known filter response sequences
 float filt_resp_f250_kf250[20] = { 0, 0, 0.581295066636667, 0.442945217244330,
@@ -185,10 +173,11 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue);
 
 void packThe6Floats();
-
 void uart_in_handle(char*, uint32_t, uint8_t);
 int8_t uart_in_handle_reset(char*, uint32_t);
 int8_t uart_in_handle_reference(char*, uint32_t);
+int8_t uart_transmit_VectorXY(uint8_t frameid, Vector3 data);
+int8_t uart_transmit_IMU();
 
 /* USER CODE END PFP */
 
@@ -272,6 +261,8 @@ int main(void) {
 //	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
 //		Error_Handler();
 //	}
+
+
 	while (1) {
 
 		//IMU_LP_Filter();
@@ -835,6 +826,27 @@ int8_t uart_in_handle_reference(char *uart_msg, uint32_t len) {
 	return 1;
 }
 
+int8_t uart_transmit_VectorXY(uint8_t frameid, Vector3 data) {
+	char msg[8] = { 0 };
+
+	memcpy(msg, &(data.x), sizeof(float));
+	memcpy(msg + sizeof(float), &(data.y), sizeof(float));
+
+	return uart_transmit(&txHandler, msg, sizeof(msg), frameid);
+}
+
+int8_t uart_transmit_IMU() {
+	char msg[12] = { 0 };
+
+	Vector3 accel = accelFiltQueue.queue[NewestEntryIndex(&accelFiltQueue)];
+	Vector3 gyro = gyroFiltQueue.queue[NewestEntryIndex(&gyroFiltQueue)];
+
+	memcpy(msg, 					&(accel.x), sizeof(float) * 2); // Accelerometer X and Y
+	memcpy(msg + 2 * sizeof(float), &(gyro.z), 	sizeof(float)); // Gyro Z
+
+	return uart_transmit(&txHandler, msg, sizeof(msg), UART_ID_ACCELGYRO);
+}
+
 float calcDistance(MotorController *c) {
 	float deltaTicks = c->Encoder->output * TOTAL_WHEEL_TICKS
 			- c->Encoder->lastTicks;
@@ -866,10 +878,8 @@ void updatePositionsAndVelocities() {
 
 	// Position and velocity data from wheel encoders
 	calcPositionAndVelocity();
-	sendPositionAndVelocity();
 
-	// TODO: Removed comments
-	if (1/*spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi*/) {
+	if (spamCheckX != posX || spamCheckY != posY || spamCheckPhi != posPhi) {
 		spamCheckX = posX;
 		spamCheckY = posY;
 		spamCheckPhi = posPhi;
@@ -1270,7 +1280,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		int16_t rawGyroData_Y = 0;
 		int16_t rawGyroData_Z = 0;
 
-		Axes3 newMPUData;
+		Vector3 newMPUData;
 
 		float sensitivity = 0.0f;
 
@@ -1291,9 +1301,9 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.x = (float) rawGyroData_X / sensitivity;
 		newMPUData.y = (float) rawGyroData_Y / sensitivity;
 		newMPUData.z = (float) rawGyroData_Z / sensitivity;
-		EnterStructQueue(&gyro, &newMPUData);
+		EnterStructQueue(&gyroRawQueue, &newMPUData);
 
-		IMU_LP_Filter_calc_next(&gyro, &gyroFilteredQueue);
+		IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1);
 
@@ -1302,7 +1312,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		int16_t rawAccelData_Y;
 		int16_t rawAccelData_Z;
 
-		Axes3 newMPUData;
+		Vector3 newMPUData;
 
 		float sensitivity;
 
@@ -1323,14 +1333,14 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.x = (float) rawAccelData_X / sensitivity;
 		newMPUData.y = (float) rawAccelData_Y / sensitivity;
 		newMPUData.z = (float) rawAccelData_Z / sensitivity;
-		EnterStructQueue(&accel, &newMPUData);
+		EnterStructQueue(&accelRawQueue, &newMPUData);
 
-		IMU_LP_Filter_calc_next(&accel, &accelFilteredQueue);
+		IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
 	}
-
+	uart_transmit_IMU();
 	uint32_t time_e = micros();
 	last_dur = time_e - time_s;
 }
@@ -1365,7 +1375,7 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 
 		// Generate input sequence
 		double val = sin(2.0 * M_PI * signal_freq * i * sample_time);
-		Axes3 axisVal = { val, val, val };
+		Vector3 axisVal = { val, val, val };
 		EnterStructQueue(rawQueue, &axisVal);
 
 		// Compute output sequence
@@ -1393,28 +1403,22 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 void IMU_LP_Filter_calc_next(StructQueue *rawQueue, StructQueue *filtQueue) {
 
 	//This will be the new filtered sample
-	Axes3 next = { 0 };
+	Vector3 next = { 0 };
 
 	//A struct that contain the tree
-	Axes3 filtered[3] = { 0 };
-	Axes3 raw[3] = { 0 };
+	Vector3 filtered[3] = { 0 };
+	Vector3 raw[3] = { 0 };
 
 	// Iterate through queue starting with the most recent value
 	// raw[0] will be the most recent
 	for (int8_t i = 0; i < 3; i++) {
-		int srcIndex = ((rawQueue->pointWR) - 1 - i);
-		while (srcIndex < 0)
-			srcIndex += rawQueue->queueLength;
-		raw[i] = rawQueue->queue[srcIndex];
+		raw[i] = rawQueue->queue[RecentEntryIndex(rawQueue, -i)];
 	}
 
 	// Iterate through queue starting with the most recent value
 	// filtered[0] will be the most recent
 	for (int8_t i = 0; i < 3; i++) {
-		int srcIndex = ((filtQueue->pointWR) - 1 - i);
-		while (srcIndex < 0)
-			srcIndex += filtQueue->queueLength;
-		filtered[i] = filtQueue->queue[srcIndex];
+		filtered[i] = filtQueue->queue[RecentEntryIndex(filtQueue, -i)];
 	}
 
 	next.x = LP_filter(raw[2].x, raw[1].x, raw[0].x, filtered[2].x,

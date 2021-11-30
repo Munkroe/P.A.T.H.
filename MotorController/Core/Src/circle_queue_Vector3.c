@@ -4,7 +4,7 @@
  *  Created on: Mar 16, 2021
  *      Author: Mikkel
  */
-#include "circle_queue_struct.h"
+#include <circle_queue_Vector3.h>
 
 int StructQueueFull(StructQueue *q) {
 	return (((q->pointWR) % q->queueLength) == q->pointRD && (q->pointWR) != 0);
@@ -14,7 +14,7 @@ int StructQueueEmpty(StructQueue *q) {
 	return (q->pointWR == q->pointRD);
 }
 
-int EnterStructQueue(StructQueue *q, Axes3 *data) {
+int EnterStructQueue(StructQueue *q, Vector3 *data) {
 
 	if (StructQueueFull(q)) {
 		return 0;
@@ -31,7 +31,7 @@ int EnterStructQueue(StructQueue *q, Axes3 *data) {
 	return 1;
 }
 
-int LeaveStructQueue(StructQueue *q, Axes3 *data, uint8_t backtrack_from_write) {
+int LeaveStructQueue(StructQueue *q, Vector3 *data, uint8_t backtrack_from_write) {
 	if (backtrack_from_write == 0) {
 		if (StructQueueEmpty(q)) {
 			return 0;
@@ -44,10 +44,22 @@ int LeaveStructQueue(StructQueue *q, Axes3 *data, uint8_t backtrack_from_write) 
 			}
 		}
 		return 1;
-	}else if (((q->pointWR) - backtrack_from_write -1) > 0){
-		*data = q->queue[(q->pointWR) - backtrack_from_write -1];
-	}else return 1;
+	} else if (((q->pointWR) - backtrack_from_write - 1) > 0) {
+		*data = q->queue[(q->pointWR) - backtrack_from_write - 1];
+	} else
+		return 1;
 
+}
+
+int NewestEntryIndex(StructQueue *q) {
+	RecentEntryIndex(q, 0);
+}
+
+int RecentEntryIndex(StructQueue *q, int offset) {
+	int i = (q->pointWR) - 1 + offset;
+	if (i < 0)
+		i = (i % q->queueLength) + q->queueLength;
+	return i;
 }
 
 int UnreadElements(StructQueue *q) {

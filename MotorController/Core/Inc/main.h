@@ -133,6 +133,20 @@ void reset_odometry();
 #define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
+#define MPU_QUEUE_LENGTH 3
+#define WHEELDIA 0.085
+#define DISBETWHEEL 0.3637
+#define TOTAL_WHEEL_TICKS 1920
+#define UART_IN_BUF_SIZE 256
+#define MOTOR_VOLTAGE_MAX 13.0
+#define MOTOR_VOLTAGE_STALL 2.5
+#define MOTOR_ANGULAR_VELOCITY_MIN 0.001
+#define MOTOR_VOLTAGE_OFFSET 0 // 5
+#define MOTOR_VELOCITY_DEADZONE 0.01
+#define UART_ID_MOTOR 2
+#define UART_ID_ORIENTATION 3
+#define UART_ID_ACCELGYRO 4
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
