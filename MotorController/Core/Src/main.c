@@ -45,7 +45,7 @@
 #define UART_IN_BUF_SIZE 256
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
-#define MOTOR_ANGULAR_VELOCITY_MIN 0.01
+#define MOTOR_ANGULAR_VELOCITY_MIN 0.001
 #define UART_ID_MOTOR 2
 #define MOTOR_VOLTAGE_OFFSET 0 // 5
 #define MOTOR_VELOCITY_DEADZONE 0.01
@@ -1096,7 +1096,10 @@ void updateAngularVelocity(MotorController *c) {
 	c->Encoder->lastAngle = c->Encoder->output * 2 * M_PI;
 	c->measAngVel = deltaAngle / controllerPeriod;
 
-	if (abs(c->measAngVel) < MOTOR_ANGULAR_VELOCITY_MIN) {
+
+	float angVelPos = c->measAngVel;
+	if (angVelPos < 0) angVelPos = -angVelPos;
+	if (angVelPos < MOTOR_ANGULAR_VELOCITY_MIN) {
 		c->measAngVel = 0;
 	}
 }
