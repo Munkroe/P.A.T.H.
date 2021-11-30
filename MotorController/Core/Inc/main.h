@@ -133,7 +133,7 @@ void reset_odometry();
 #define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define MPU_QUEUE_LENGTH 3
+#define MPU_QUEUE_LENGTH 50
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920

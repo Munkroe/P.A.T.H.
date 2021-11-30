@@ -848,7 +848,7 @@ int8_t uart_transmit_IMU() {
 float calcDistance(MotorController *c) {
 	int deltaTicks = c->Encoder->revolutions * TOTAL_WHEEL_TICKS
 			+ c->Encoder->fineAdjustment - c->Encoder->lastTicks;
-	return M_PI * WHEELDIA * (deltaTicks / TOTAL_WHEEL_TICKS);
+	return (M_PI * WHEELDIA * deltaTicks) / TOTAL_WHEEL_TICKS;
 }
 
 void calcPositionAndVelocity() {
