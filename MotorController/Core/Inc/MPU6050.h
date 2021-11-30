@@ -33,12 +33,6 @@ static const uint8_t MPU_TempReg = 0x41;
 static const uint8_t MPU_GyroOut = 0x43;
 static const uint8_t MPU_AccelOut = 0x3B;
 
-typedef struct {
-	float x;
-	float y;
-	float z;
-} Vector3;
-
 HAL_StatusTypeDef MPU_Init(I2C_HandleTypeDef * I2C_handler);
 
 float MPU_Read_Temp();

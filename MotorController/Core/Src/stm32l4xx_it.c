@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32l4xx_it.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -48,6 +49,8 @@ extern UartCommHandler txHandler;
 
 uint32_t s, e, d;
 
+uint32_t lastSecond_ms = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +60,7 @@ uint32_t s, e, d;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 
 /* USER CODE END 0 */
 
@@ -199,6 +203,9 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
+  // Request data from IMU every millisecond
+  IMU_RequestData();
+
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -326,6 +333,13 @@ void TIM2_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
 	micros_overflow();
+
+	// Check if a second has passed
+	if (HAL_GetTick() >= lastSecond_ms + 1000) {
+		lastSecond_ms += 1000;
+		Callback_1Hz();
+	}
+
 	controlBothMotors();
 
   /* USER CODE END TIM2_IRQn 1 */

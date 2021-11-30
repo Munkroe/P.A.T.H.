@@ -32,14 +32,14 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Vector3.h"
 #include "stdbool.h"
 #include "math.h"
 #include "microsecond_counter.h"
 #include "orientation.h"
 #include "frame_comm.h"
-#include "MPU6050.h"
-
-
+#include "IMU_handler.h"
+#include "IMU_filter.h"
 
 /* USER CODE END Includes */
 
@@ -93,6 +93,7 @@ void Error_Handler(void);
 
 void UpdateBatteryVoltage();
 void reset_odometry();
+void Callback_1Hz();
 
 /* USER CODE END EFP */
 
