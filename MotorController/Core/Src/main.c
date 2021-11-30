@@ -261,7 +261,6 @@ int main(void) {
 //	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
 //		Error_Handler();
 //	}
-
 	while (1) {
 
 		//IMU_LP_Filter();
@@ -646,10 +645,10 @@ static void MX_DMA_Init(void) {
 
 	/* DMA interrupt init */
 	/* DMA1_Channel6_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
+	HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 1, 0);
 	HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
 	/* DMA1_Channel7_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
+	HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 1, 0);
 	HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
 
 }
@@ -847,18 +846,18 @@ int8_t uart_transmit_IMU() {
 }
 
 float calcDistance(MotorController *c) {
-	float deltaTicks = c->Encoder->output * TOTAL_WHEEL_TICKS
-			- c->Encoder->lastTicks;
+	int deltaTicks = c->Encoder->revolutions * TOTAL_WHEEL_TICKS
+			+ c->Encoder->fineAdjustment - c->Encoder->lastTicks;
 	return M_PI * WHEELDIA * (deltaTicks / TOTAL_WHEEL_TICKS);
 }
 
 void calcPositionAndVelocity() {
 	float distR = calcDistance(&controllerR);
 	float distL = calcDistance(&controllerL);
-	controllerR.Encoder->lastTicks = controllerR.Encoder->output
-			* TOTAL_WHEEL_TICKS;
-	controllerL.Encoder->lastTicks = controllerL.Encoder->output
-			* TOTAL_WHEEL_TICKS;
+	controllerR.Encoder->lastTicks = controllerR.Encoder->revolutions * TOTAL_WHEEL_TICKS
+			+ controllerR.Encoder->fineAdjustment;
+	controllerL.Encoder->lastTicks = controllerL.Encoder->revolutions * TOTAL_WHEEL_TICKS
+			+ controllerL.Encoder->fineAdjustment;
 	float dist = (distL + distR) / 2;
 	posX = posX + dist * cos(posPhi);
 	posY = posY + dist * sin(posPhi);
@@ -882,12 +881,14 @@ void updatePositionsAndVelocities() {
 	//	spamCheckX = posX;
 	//	spamCheckY = posY;
 	//	spamCheckPhi = posPhi;
-		sendPositionAndVelocity();
+	sendPositionAndVelocity();
 	//}
 
 	// Encoder data from top plate
 	calcOrientOutput();
 	sendOrientData();
+
+	uart_transmit_IMU();
 }
 
 void packThe6Floats() {
@@ -1338,7 +1339,6 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
-		uart_transmit_IMU();
 	}
 	uint32_t time_e = micros();
 	last_dur = time_e - time_s;
