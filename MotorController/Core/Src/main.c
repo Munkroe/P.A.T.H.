@@ -1058,37 +1058,50 @@ void calculateError(MotorController *c) {
 
 void nextVoltage(MotorController *c) {
 
-	// Kill motors if we want to stop and are practically already stopped
-	if (c->reference == 0.0 && abs(c->measAngVel < MOTOR_VELOCITY_DEADZONE))
-		c->controlVoltage = 0.0;
-	else
-		// Normal controller operation
-		c->controlVoltage = c->lastError * 2.82 * controllerPeriod
-				+ c->controlVoltage;
+//	// *********************************************************************
+//	// ********* THIS CONTROLLER IMPLEMENTAITON IS NOT FULLY WORKING *******
+//	// *********************************************************************
+//	// Kill motors if we want to stop and are practically already stopped
+//	if (c->reference == 0.0 && abs(c->measAngVel < MOTOR_VELOCITY_DEADZONE))
+//		c->controlVoltage = 0.0;
+//	else
+//		// Normal controller operation
+//		c->controlVoltage = c->lastError * 2.82 * controllerPeriod
+//				+ c->controlVoltage;
+//
+//	if (c->controlVoltage > MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET) {
+//		c->controlVoltage = MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET;
+//	} else if (c->controlVoltage < -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET) {
+//		c->controlVoltage = -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET;
+//	}
+//
+//	/* Change direction only if we both want to actually
+//	 * change direction (reference), and output voltage is at the offset edge
+//	 * (controlVoltage ~= 0 ==> driveVoltage = MOTOR_VOLTAGE_OFFSET).
+//	 * This enables the controlVoltage to swing around 0V,
+//	 * without the MOTOR_VOLTAGE_OFFSET frantically changing polarity.
+//	 */
+//	if (/*c->reference > 0 &&*/c->controlVoltage >= 0) {
+//		c->motor->direction = 1;
+//	} else if (/*c->reference < 0 &&*/c->controlVoltage <= 0) {
+//		c->motor->direction = -1;
+//	}
+//
+//	if (c->controlVoltage != 0.0)
+//		c->driveVoltage = MOTOR_VOLTAGE_OFFSET * c->motor->direction
+//				+ c->controlVoltage;
+//	else
+//		c->driveVoltage = 0.0;
+//	// *********************************************************************
 
-	if (c->controlVoltage > MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET) {
-		c->controlVoltage = MOTOR_VOLTAGE_MAX - MOTOR_VOLTAGE_OFFSET;
-	} else if (c->controlVoltage < -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET) {
-		c->controlVoltage = -MOTOR_VOLTAGE_MAX + MOTOR_VOLTAGE_OFFSET;
-	}
 
-	/* Change direction only if we both want to actually
-	 * change direction (reference), and output voltage is at the offset edge
-	 * (controlVoltage ~= 0 ==> driveVoltage = MOTOR_VOLTAGE_OFFSET).
-	 * This enables the controlVoltage to swing around 0V,
-	 * without the MOTOR_VOLTAGE_OFFSET frantically changing polarity.
-	 */
-	if (/*c->reference > 0 &&*/c->controlVoltage >= 0) {
-		c->motor->direction = 1;
-	} else if (/*c->reference < 0 &&*/c->controlVoltage <= 0) {
-		c->motor->direction = -1;
-	}
-
-	if (c->controlVoltage != 0.0)
-		c->driveVoltage = MOTOR_VOLTAGE_OFFSET * c->motor->direction
-				+ c->controlVoltage;
-	else
-		c->driveVoltage = 0.0;
+	// Old implementation
+	c->driveVoltage = c->lastError * 2.82 * controllerPeriod + c->driveVoltage;
+		if (c->driveVoltage > MOTOR_VOLTAGE_MAX) {
+			c->driveVoltage = MOTOR_VOLTAGE_MAX;
+		} else if (c->driveVoltage < -MOTOR_VOLTAGE_MAX) {
+			c->driveVoltage = -MOTOR_VOLTAGE_MAX;
+		}
 }
 
 void updateAngularVelocity(MotorController *c) {
@@ -1106,10 +1119,26 @@ void updateAngularVelocity(MotorController *c) {
 
 void updateDutyCycle(MotorController *c) {
 
-	if (c->driveVoltage == 0.0) {
-		c->motor->dutyCycle = 0;
-		return;
-	}
+//	// *********************************************************************
+//	// ********* THIS CONTROLLER IMPLEMENTAITON IS NOT FULLY WORKING *******
+//	// *********************************************************************
+//	if (c->driveVoltage == 0.0) {
+//		c->motor->dutyCycle = 0;
+//		return;
+//	}
+//	// *********************************************************************
+
+	// *** Old controller implementation
+	if (c->driveVoltage > 0) {
+			c->motor->direction = 1;
+		} else if (c->driveVoltage < 0) {
+			c->motor->direction = -1;
+		} else {
+			c->motor->dutyCycle = 0;
+			return;
+		}
+	// ***
+
 
 	float pwm = c->driveVoltage / batteryVoltage;
 
@@ -1133,8 +1162,8 @@ void setDutyCycle(MotorController *c) {
 			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 1);
 		} else {
 			// MOTOR STOP
-			HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
-			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
+			//HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
+			//HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
 		}
 	} else if (c->motor->name == 'L') {
 		htim1.Instance->CCR2 = (uint32_t) ((htim1.Instance->ARR)
@@ -1148,8 +1177,8 @@ void setDutyCycle(MotorController *c) {
 			HAL_GPIO_WritePin(DIR_L2_GPIO_Port, DIR_L2_Pin, 1);
 		} else {
 			// MOTOR STOP
-			HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
-			HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
+			//HAL_GPIO_WritePin(DIR_R1_GPIO_Port, DIR_R1_Pin, 0);
+			//HAL_GPIO_WritePin(DIR_R2_GPIO_Port, DIR_R2_Pin, 0);
 		}
 	} else {
 		return;
