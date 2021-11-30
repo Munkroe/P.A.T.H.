@@ -6,17 +6,17 @@
  */
 #include <circle_queue_Vector3.h>
 
-int StructQueueFull(StructQueue *q) {
+int Vector3QueueFull(Vector3Queue *q) {
 	return (((q->pointWR) % q->queueLength) == q->pointRD && (q->pointWR) != 0);
 }
 
-int StructQueueEmpty(StructQueue *q) {
+int Vector3QueueEmpty(Vector3Queue *q) {
 	return (q->pointWR == q->pointRD);
 }
 
-int EnterStructQueue(StructQueue *q, Vector3 *data) {
+int AppendVector3Queue(Vector3Queue *q, Vector3 *data) {
 
-	if (StructQueueFull(q)) {
+	if (Vector3QueueFull(q)) {
 		return 0;
 	} else {
 		q->queue[q->pointWR] = *data;
@@ -31,38 +31,32 @@ int EnterStructQueue(StructQueue *q, Vector3 *data) {
 	return 1;
 }
 
-int LeaveStructQueue(StructQueue *q, Vector3 *data, uint8_t backtrack_from_write) {
-	if (backtrack_from_write == 0) {
-		if (StructQueueEmpty(q)) {
-			return 0;
+int ReadVector3Queue(Vector3Queue *q, Vector3 *data) {
+	if (Vector3QueueEmpty(q)) {
+		return 0;
+	} else {
+		*data = q->queue[q->pointRD];
+		if ((q->pointRD + 1) == q->queueLength) {
+			q->pointRD = 0;
 		} else {
-			*data = q->queue[q->pointRD];
-			if ((q->pointRD + 1) == q->queueLength) {
-				q->pointRD = 0;
-			} else {
-				q->pointRD += 1;
-			}
+			q->pointRD += 1;
 		}
-		return 1;
-	} else if (((q->pointWR) - backtrack_from_write - 1) > 0) {
-		*data = q->queue[(q->pointWR) - backtrack_from_write - 1];
-	} else
-		return 1;
-
+	}
+	return 1;
 }
 
-int NewestEntryIndex(StructQueue *q) {
+int NewestEntryIndex(Vector3Queue *q) {
 	RecentEntryIndex(q, 0);
 }
 
-int RecentEntryIndex(StructQueue *q, int offset) {
+int RecentEntryIndex(Vector3Queue *q, int offset) {
 	int i = (q->pointWR) - 1 + offset;
 	if (i < 0)
 		i = (i % q->queueLength) + q->queueLength;
 	return i;
 }
 
-int UnreadElements(StructQueue *q) {
+int UnreadElements(Vector3Queue *q) {
 	if (q->pointRD == q->pointWR) {
 		return 0;
 	} else {

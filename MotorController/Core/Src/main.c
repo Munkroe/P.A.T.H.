@@ -18,12 +18,12 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <circle_queue_Vector3.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "circle_queue_Vector3.h"
 
 /* USER CODE END Includes */
 
@@ -73,9 +73,9 @@ uint8_t MPU_out[6] = { 0 };
 volatile uint8_t globalDMAFlag = 0;
 Vector3 accelRawArr[MPU_QUEUE_LENGTH] = { 0 };
 Vector3 gyroRawArr[MPU_QUEUE_LENGTH] = { 0 };
-StructQueue accelRawQueue = { .pointRD = 0, .pointWR = 0, .queue = accelRawArr,
+Vector3Queue accelRawQueue = { .pointRD = 0, .pointWR = 0, .queue = accelRawArr,
 		.queueLength = MPU_QUEUE_LENGTH };
-StructQueue gyroRawQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroRawArr,
+Vector3Queue gyroRawQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroRawArr,
 		.queueLength = MPU_QUEUE_LENGTH };
 
 //LP filter coefficients. Calculate based on T and W_c
@@ -95,10 +95,10 @@ float F = 0.398367669019004;
 
 Vector3 accelFiltArr[MPU_QUEUE_LENGTH] = { 0 };
 Vector3 gyroFiltArr[MPU_QUEUE_LENGTH] = { 0 };
-StructQueue accelFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
+Vector3Queue accelFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
 		accelFiltArr, .queueLength = MPU_QUEUE_LENGTH };
-StructQueue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
-		gyroFiltArr, .queueLength = MPU_QUEUE_LENGTH };
+Vector3Queue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroFiltArr,
+		.queueLength = MPU_QUEUE_LENGTH };
 
 // Known filter response sequences
 float filt_resp_f250_kf250[20] = { 0, 0, 0.581295066636667, 0.442945217244330,
@@ -170,7 +170,7 @@ float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
 int8_t samples_equivalence_test(float *a, float *b, uint32_t len,
 		float tolerance);
 int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
-		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue);
+		float *comp_seq, Vector3Queue *rawQueue, Vector3Queue *filtQueue);
 
 void packThe6Floats();
 void uart_in_handle(char*, uint32_t, uint8_t);
@@ -261,7 +261,6 @@ int main(void) {
 //	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
 //		Error_Handler();
 //	}
-
 
 	while (1) {
 
@@ -619,7 +618,7 @@ static void MX_USART2_UART_Init(void) {
 
 	/* USER CODE END USART2_Init 1 */
 	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 250000;
+	huart2.Init.BaudRate = 500000;
 	huart2.Init.WordLength = UART_WORDLENGTH_8B;
 	huart2.Init.StopBits = UART_STOPBITS_1;
 	huart2.Init.Parity = UART_PARITY_NONE;
@@ -841,8 +840,8 @@ int8_t uart_transmit_IMU() {
 	Vector3 accel = accelFiltQueue.queue[NewestEntryIndex(&accelFiltQueue)];
 	Vector3 gyro = gyroFiltQueue.queue[NewestEntryIndex(&gyroFiltQueue)];
 
-	memcpy(msg, 					&(accel.x), sizeof(float) * 2); // Accelerometer X and Y
-	memcpy(msg + 2 * sizeof(float), &(gyro.z), 	sizeof(float)); // Gyro Z
+	memcpy(msg, &(accel.x), sizeof(float) * 2); // Accelerometer X and Y
+	memcpy(msg + 2 * sizeof(float), &(gyro.z), sizeof(float)); // Gyro Z
 
 	return uart_transmit(&txHandler, msg, sizeof(msg), UART_ID_ACCELGYRO);
 }
@@ -1301,7 +1300,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.x = (float) rawGyroData_X / sensitivity;
 		newMPUData.y = (float) rawGyroData_Y / sensitivity;
 		newMPUData.z = (float) rawGyroData_Z / sensitivity;
-		EnterStructQueue(&gyroRawQueue, &newMPUData);
+		AppendVector3Queue(&gyroRawQueue, &newMPUData);
 
 		IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
 
@@ -1333,14 +1332,14 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 		newMPUData.x = (float) rawAccelData_X / sensitivity;
 		newMPUData.y = (float) rawAccelData_Y / sensitivity;
 		newMPUData.z = (float) rawAccelData_Z / sensitivity;
-		EnterStructQueue(&accelRawQueue, &newMPUData);
+		AppendVector3Queue(&accelRawQueue, &newMPUData);
 
 		IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
 
 		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
 		globalDMAFlag = 0;
+		uart_transmit_IMU();
 	}
-	uart_transmit_IMU();
 	uint32_t time_e = micros();
 	last_dur = time_e - time_s;
 }
@@ -1365,7 +1364,7 @@ float LP_filter(float x_old2, float x_old1, float x, float y_old3, float y_old2,
 }
 
 int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
-		float *comp_seq, StructQueue *rawQueue, StructQueue *filtQueue) {
+		float *comp_seq, Vector3Queue *rawQueue, Vector3Queue *filtQueue) {
 	double sample_time = 1.0 / sample_freq;
 
 	if (MPU_QUEUE_LENGTH != 20)
@@ -1376,7 +1375,7 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 		// Generate input sequence
 		double val = sin(2.0 * M_PI * signal_freq * i * sample_time);
 		Vector3 axisVal = { val, val, val };
-		EnterStructQueue(rawQueue, &axisVal);
+		AppendVector3Queue(rawQueue, &axisVal);
 
 		// Compute output sequence
 		IMU_LP_Filter_calc_next(rawQueue, filtQueue);
@@ -1400,7 +1399,7 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 					0.0000001);
 }
 
-void IMU_LP_Filter_calc_next(StructQueue *rawQueue, StructQueue *filtQueue) {
+void IMU_LP_Filter_calc_next(Vector3Queue *rawQueue, Vector3Queue *filtQueue) {
 
 	//This will be the new filtered sample
 	Vector3 next = { 0 };
@@ -1428,7 +1427,7 @@ void IMU_LP_Filter_calc_next(StructQueue *rawQueue, StructQueue *filtQueue) {
 	next.z = LP_filter(raw[2].z, raw[1].z, raw[0].z, filtered[2].z,
 			filtered[1].z, filtered[0].z);
 
-	EnterStructQueue(filtQueue, &next);
+	AppendVector3Queue(filtQueue, &next);
 }
 
 /* USER CODE END 4 */
