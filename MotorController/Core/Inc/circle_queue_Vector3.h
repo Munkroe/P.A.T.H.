@@ -25,7 +25,7 @@ typedef struct StructQueue {
 int Vector3QueueFull(Vector3Queue *q);
 int Vector3QueueEmpty(Vector3Queue *q);
 int AppendVector3Queue(Vector3Queue *q, Vector3 *data);
-int ReadVector3Queue(Vector3Queue *q, Vector3 *data, uint8_t backtrack);
+int ReadVector3Queue(Vector3Queue *q, Vector3 *data);
 int NewestEntryIndex(Vector3Queue *q);
 int RecentEntryIndex(Vector3Queue *q, int offset);
 int UnreadElements(Vector3Queue *q);
