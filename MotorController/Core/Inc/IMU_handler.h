@@ -12,6 +12,7 @@
 #include "IMU_filter.h"
 
 #define IMU_TX_BUFFER_SIZE 14
+#define MPU_QUEUE_LENGTH 50
 
 typedef enum {
 	IMU_UNINITIALIZED,
@@ -39,5 +40,7 @@ int8_t IMU_HandleReceivedData();
 Vector3 ConvertAccelData(uint8_t *regs);
 
 Vector3 ConvertGyroData(uint8_t *regs);
+
+void IMU_CalibrateGyro();
 
 #endif /* INC_IMU_HANDLER_H_ */

@@ -87,7 +87,10 @@ float velY = 0.0;
 float velPhi = 0.0;
 uint8_t position[24] = { 0 };
 
+bool gyro_calibration_done = false;
+
 extern float orientAngle;
+extern Vector3Queue gyroRawQueue;
 
 uint8_t MOTORID = 2;
 
@@ -135,6 +138,8 @@ void uart_in_handle(char*, uint32_t, uint8_t);
 int8_t uart_in_handle_reset(char*, uint32_t);
 int8_t uart_in_handle_reference(char*, uint32_t);
 int8_t uart_transmit_VectorXY(uint8_t frameid, Vector3 data);
+int8_t InitialCalibration();
+void MainLoop();
 
 /* USER CODE END PFP */
 
@@ -206,16 +211,11 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 
-//	// Compare filter response to 20 known output samples
-//	if (!(IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &accel, &accelFilteredQueue) && IMU_LP_Filter_test(250.0, 1000.0, &filt_resp_f250_kf250, &gyro, &gyroFilteredQueue))) {
-//		Error_Handler();
-//	}
+	InitialCalibration();
+
 	while (1) {
 
-		// Retrieve data if an IMU data request has just been issued
-		IMU_RetrieveData();
-		// Handle and process data if data retrieval has been requested and we have just received data
-		IMU_HandleReceivedData();
+		MainLoop();
 
 		/* USER CODE END WHILE */
 
@@ -740,8 +740,11 @@ void uart_in_handle(char *uart_msg, uint32_t len, uint8_t id) {
 
 	if (uart_in_handle_reset(uart_msg, len))
 		return;
-	if (uart_in_handle_reference(uart_msg, len))
-		return;
+	if (gyro_calibration_done) {
+		if (uart_in_handle_reference(uart_msg, len))
+			return;
+	}
+
 }
 
 int8_t uart_in_handle_reset(char *uart_msg, uint32_t len) {
@@ -1204,7 +1207,6 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	IMU_ReceiveComplete();
-
 }
 
 void Callback_1Hz() {
@@ -1214,6 +1216,41 @@ void Callback_1Hz() {
 void Callback_1kHz() {
 	// Set the IMU read pointer to the sensor data registers
 	IMU_RequestData();
+}
+
+void MainLoop() {
+	// Retrieve data if an IMU data request has just been issued
+	IMU_RetrieveData();
+	// Handle and process data if data retrieval has been requested and we have just received data
+	IMU_HandleReceivedData();
+}
+
+int8_t InitialCalibration() {
+	gyro_calibration_done = false;
+
+	controllerL.reference = 0.0;
+	controllerR.reference = 0.0;
+
+	while (controllerL.measAngVel != 0.0 || controllerR.measAngVel != 0.0) {
+		MainLoop();
+	}
+
+	uint32_t calStart = micros();
+	int startIndex = gyroRawQueue.pointWR;
+	uint32_t start_time = HAL_GetTick();
+
+	// Wait till while the gyro settles
+	while (HAL_GetTick() < start_time + GYRO_CALIBRATION_TIME_MS) {
+		MainLoop();
+	}
+
+	uint32_t queFilled = micros();
+
+	IMU_CalibrateGyro();
+
+	gyro_calibration_done = true;
+
+	uint32_t calDone = micros();
 }
 
 /* USER CODE END 4 */

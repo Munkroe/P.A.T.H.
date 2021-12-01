@@ -35,14 +35,23 @@ Vector3Queue accelFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
 Vector3Queue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroFiltArr,
 		.queueLength = MPU_QUEUE_LENGTH };
 
-uint32_t imu_request_us = 0, imu_request_done_us = 0, imu_retrieve_us = 0, imu_retrieve_done_us = 0, imu_handle_us = 0, imu_handle_done_us = 0;
+Vector3 gyro_cali_offset = { .x = 0.0, .y = 0.0, .z = 0.0 };
+
+uint32_t imu_request_us = 0, imu_request_done_us = 0, imu_retrieve_us = 0,
+		imu_retrieve_done_us = 0, imu_handle_us = 0, imu_handle_done_us = 0;
+
+uint32_t imu_error_counter = 0;
+
+int8_t IMU_Reset();
+
 
 /**
  * Initiate IMU by configuring registers.
  * @return Succes (1) or fail (0)
  */
 int8_t IMU_init() {
-	if (imu_state != IMU_UNINITIALIZED) return 0;
+	if (imu_state != IMU_UNINITIALIZED)
+		return 0;
 
 	while (MPU_Init(&hi2c3) != HAL_OK) {
 
@@ -52,12 +61,42 @@ int8_t IMU_init() {
 	return 1;
 }
 
+void IMU_CalibrateGyro() {
+	// Find the index at which the average summation should stop, in case not the whole queue has been filled
+	uint32_t lastIndex = gyroRawQueue.queueLength-1;
+	Vector3 v3LastIndex = gyroRawQueue.queue[gyroRawQueue.queueLength-1];
+	if (v3LastIndex.x == 0.0 && v3LastIndex.y == 0.0 && v3LastIndex.z == 0.0) lastIndex = NewestEntryIndex(&gyroRawQueue);
+
+	// Summation of all queue elements
+	uint16_t entries = lastIndex + 1;
+	Vector3 sum = { 0 };
+	for (uint16_t i = 0; i < entries; i++) {
+		Vector3 entry = gyroRawQueue.queue[i];
+		sum.x += entry.x;
+		sum.y += entry.y;
+		sum.z += entry.z;
+	}
+
+	// Calculate average
+	gyro_cali_offset.x = sum.x / entries;
+	gyro_cali_offset.y = sum.y / entries;
+	gyro_cali_offset.z = sum.z / entries;
+}
+
+int8_t IMU_Reset() {
+	if(HAL_I2C_DeInit(&hi2c3) != HAL_OK) return 0;
+	if(HAL_I2C_Init(&hi2c3) != HAL_OK) return 0;
+	return 1;
+}
+
 int8_t IMU_TransmitComplete() {
-	if (imu_state == IMU_REQUEST_START) imu_state = IMU_REQUEST_STOP;
+	if (imu_state == IMU_REQUEST_START)
+		imu_state = IMU_REQUEST_STOP;
 }
 
 int8_t IMU_ReceiveComplete() {
-	if (imu_state == IMU_RETRIEVAL_START) imu_state = IMU_RETRIEVAL_STOP;
+	if (imu_state == IMU_RETRIEVAL_START)
+		imu_state = IMU_RETRIEVAL_STOP;
 }
 
 /**
@@ -65,13 +104,28 @@ int8_t IMU_ReceiveComplete() {
  * @return Success (1) or fail (0)
  */
 int8_t IMU_RequestData() {
-	if (imu_state == IMU_UNINITIALIZED) return 0;
 
+	if (imu_state == IMU_UNINITIALIZED)
+		return 0;
+
+	if (imu_state != IMU_IDLE) {
+		imu_error_counter++;
+		//if (hi2c3.State != HAL_I2C_STATE_ABORT)
+
+
+		imu_state = IMU_IDLE;
+		return 0;
+	}
 	imu_request_us = micros();
 
 	if (HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1)
-			!= HAL_OK)
+			!= HAL_OK) {
+		if (hi2c3.State == HAL_I2C_STATE_READY) {
+			IMU_Reset();
+		}
 		return 0;
+	}
+
 
 	imu_request_done_us = micros();
 
@@ -87,7 +141,8 @@ int8_t IMU_RequestData() {
  * @return Success (1) or fail (0)
  */
 int8_t IMU_RetrieveData() {
-	if (imu_state != IMU_REQUEST_STOP) return 0;
+	if (imu_state != IMU_REQUEST_STOP)
+		return 0;
 
 	imu_retrieve_us = micros();
 
@@ -110,7 +165,8 @@ int8_t IMU_RetrieveData() {
  */
 int8_t IMU_HandleReceivedData() {
 
-	if (imu_state != IMU_RETRIEVAL_STOP) return 0;
+	if (imu_state != IMU_RETRIEVAL_STOP)
+		return 0;
 
 	imu_handle_us = micros();
 
@@ -118,9 +174,9 @@ int8_t IMU_HandleReceivedData() {
 	uint8_t temp_regs[2] = { 0 };
 	uint8_t gyro_regs[6] = { 0 };
 
-	memcpy(&accel_regs, &rx_buffer, 6);
-	memcpy(&temp_regs, &rx_buffer + 6, 2);
-	memcpy(&gyro_regs, &rx_buffer + 8, 6);
+	memcpy(accel_regs, 	rx_buffer, 		6);
+	memcpy(temp_regs, 	rx_buffer + 6, 	2);
+	memcpy(gyro_regs, 	rx_buffer + 8, 	6);
 
 	// Convert register data to Vector3
 	Vector3 newAccel = ConvertAccelData(accel_regs);
@@ -132,8 +188,13 @@ int8_t IMU_HandleReceivedData() {
 	AppendVector3Queue(&accelFiltQueue, &newAccel);
 
 	AppendVector3Queue(&gyroRawQueue, &newAngVel);
+
+	newAngVel.x -= gyro_cali_offset.x;
+	newAngVel.y -= gyro_cali_offset.y;
+	newAngVel.z -= gyro_cali_offset.z;
+
 	//newAngVel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
-	AppendVector3Queue(&accelFiltQueue, &newAngVel);
+	AppendVector3Queue(&gyroFiltQueue, &newAngVel);
 
 	imu_state = IMU_IDLE;
 

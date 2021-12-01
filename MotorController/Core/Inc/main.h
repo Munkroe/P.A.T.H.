@@ -135,7 +135,6 @@ void Callback_1kHz();
 #define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define MPU_QUEUE_LENGTH 3
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
@@ -148,6 +147,7 @@ void Callback_1kHz();
 #define UART_ID_MOTOR 2
 #define UART_ID_ORIENTATION 3
 #define UART_ID_ACCELGYRO 4
+#define GYRO_CALIBRATION_TIME_MS 100
 
 /* USER CODE END Private defines */
 
