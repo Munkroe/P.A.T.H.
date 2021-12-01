@@ -5,12 +5,19 @@
  *      Author: Mikkel S. Hansen
  */
 
-#include "IMU_handler.h"
+#include <circle_queue_Vector3.h>
+#include <frame_comm.h>
+#include <IMU_handler.h>
+#include <main.h>
+#include <stm32l4xx_hal_def.h>
+#include <stm32l4xx_hal_i2c.h>
+#include <string.h>
+#include <sys/_stdint.h>
+#include <Vector3.h>
 
 extern I2C_HandleTypeDef hi2c3;
 
-uint8_t rx_buffer[1] = { MPU_GyroOut };
-uint8_t tx_buffer[6] = { 0 };
+uint8_t rx_buffer[IMU_TX_BUFFER_SIZE] = { 0 };
 
 Vector3 accelRawArr[MPU_QUEUE_LENGTH] = { 0 };
 Vector3 gyroRawArr[MPU_QUEUE_LENGTH] = { 0 };
@@ -30,53 +37,74 @@ int8_t IMU_init() {
 	while (MPU_Init(&hi2c3) != HAL_OK) {
 
 	}
-
-	HAL_StatusTypeDef returnValue = HAL_I2C_Master_Transmit_IT(&hi2c3,
-			MPU_Address << 1, &MPU_GyroOut, 1);
 }
 
-void IMU_RequestData() {
-	//	if (globalDMAFlag == 1) {
-	//
-	//		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1);
-	//
-	//	} else {
-	//
-	//		HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_GyroOut, 1);
-	//		globalDMAFlag = 0;
-	//		uart_transmit_IMU();
-	//	}
+/**
+ * Send a command to the IMU setting its I2C read pointer to the sensor data registers
+ * @return Success (1) or fail (0)
+ */
+int8_t IMU_RequestData() {
+	if (HAL_I2C_Master_Transmit_IT(&hi2c3, MPU_Address << 1, &MPU_AccelOut, 1)
+			!= HAL_OK)
+		return 0;
 
-	//	if (globalDMAFlag == 0) {
-	//		HAL_I2C_Master_Receive_IT(&hi2c3, MPU_Address << 1, MPU_out, 6);
-	//		globalDMAFlag = 1;
-	//	} else {
-	//		HAL_I2C_Master_Receive_IT(&hi2c3, MPU_Address << 1, MPU_out, 6);
-	//		globalDMAFlag = 0;
-	//	}
-
+	return 1;
 }
 
-int8_t IMU_TransmitData(UartCommHandler *handler) {
-	char msg[12] = { 0 };
+/**
+ * Send a command to the IMU, ordering it to send back 14 bytes
+ * from the I2C read pointer. If IMU_RequestData() has previously been run,
+ * register data from accelerometer, temperature and gyroscope is returned.
+ * @return Success (1) or fail (0)
+ */
+int8_t IMU_RetrieveData() {
+	memset(rx_buffer, 0, IMU_TX_BUFFER_SIZE); // clear buffer
 
-	Vector3 accel = accelFiltQueue.queue[NewestEntryIndex(&accelFiltQueue)];
-	Vector3 gyro = gyroFiltQueue.queue[NewestEntryIndex(&gyroFiltQueue)];
+	if (HAL_I2C_Master_Receive_IT(&hi2c3, MPU_Address << 1, rx_buffer,
+	IMU_TX_BUFFER_SIZE))
+		return 0;
 
-	memcpy(msg, &(accel.x), sizeof(float) * 2); // Accelerometer X and Y
-	memcpy(msg + 2 * sizeof(float), &(gyro.z), sizeof(float)); // Gyro Z
-
-	return uart_transmit(handler, msg, sizeof(msg), UART_ID_ACCELGYRO);
+	return 1;
 }
 
+/**
+ * Convert the register data retrieved from a previous call to IMU_RetrieveData()
+ * into Vector3 format, apply LP filter and add to queues.
+ * @return Success (1) or fail (0)
+ */
 int8_t IMU_HandleReceivedData() {
+	uint8_t accel_regs[6] = { 0 };
+	uint8_t temp_regs[2] = { 0 };
+	uint8_t gyro_regs[6] = { 0 };
 
+	memcpy(&accel_regs, &rx_buffer, 6);
+	memcpy(&temp_regs, &rx_buffer + 6, 2);
+	memcpy(&gyro_regs, &rx_buffer + 8, 6);
+
+	// Convert register data to Vector3
+	Vector3 newAccel = ConvertAccelData(&accel_regs);
+	Vector3 newAngVel = ConvertGyroData(&gyro_regs);
+
+	// Apply filter and append queues
+	AppendVector3Queue(&accelRawQueue, &newAccel);
+	//newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	AppendVector3Queue(&accelFiltQueue, &newAccel);
+
+	AppendVector3Queue(&gyroRawQueue, &newAngVel);
+	//newAngVel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	AppendVector3Queue(&accelFiltQueue, &newAngVel);
 }
 
-void ProcessGyroData() {
-	int16_t rawGyroData_X = 0;
-	int16_t rawGyroData_Y = 0;
-	int16_t rawGyroData_Z = 0;
+/**
+ * Convert gyroscope register data into Vector 3 format
+ * @param regs Gyroscope register data (uint8_t[6])
+ * @return Gyroscope data in Vector3 format
+ */
+Vector3 ConvertGyroData(uint8_t *regs) {
+	// Data composition from raw data
+	int16_t rawGyroData_X = ((int16_t) regs[0] << 8 | regs[1]);
+	int16_t rawGyroData_Y = ((int16_t) regs[2] << 8 | regs[3]);
+	int16_t rawGyroData_Z = ((int16_t) regs[4] << 8 | regs[5]);
 
 	Vector3 newMPUData;
 
@@ -91,26 +119,24 @@ void ProcessGyroData() {
 	if (GYRO_CONFIG_SCALE == 0x18)
 		sensitivity = 16.4;
 
-	// Data composition from raw data
-	rawGyroData_X = ((int16_t) tx_buffer[0] << 8 | tx_buffer[1]);
-	rawGyroData_Y = ((int16_t) tx_buffer[2] << 8 | tx_buffer[3]);
-	rawGyroData_Z = ((int16_t) tx_buffer[4] << 8 | tx_buffer[5]);
-
 	newMPUData.x = (float) rawGyroData_X / sensitivity;
 	newMPUData.y = (float) rawGyroData_Y / sensitivity;
 	newMPUData.z = (float) rawGyroData_Z / sensitivity;
 
-	AppendVector3Queue(&gyroRawQueue, &newMPUData);
-
-	Vector3 newFiltVal = newMPUData; // IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
-
-	AppendVector3Queue(&gyroFiltQueue, &newFiltVal);
+	return newMPUData;
 }
 
-void ProcessAccelData() {
-	int16_t rawAccelData_X;
-	int16_t rawAccelData_Y;
-	int16_t rawAccelData_Z;
+/**
+ * Convert accelerometer register data into Vector3 format
+ * @param regs Accelerometer register data (uint8_t[6])
+ * @return Accelerometer data in Vector3 format
+ */
+Vector3 ConvertAccelData(uint8_t *regs) {
+
+	// Data composition from raw data
+	int16_t rawAccelData_X = ((int16_t) regs[0] << 8 | regs[1]);
+	int16_t rawAccelData_Y = ((int16_t) regs[2] << 8 | regs[3]);
+	int16_t rawAccelData_Z = ((int16_t) regs[4] << 8 | regs[5]);
 
 	Vector3 newMPUData;
 
@@ -125,18 +151,26 @@ void ProcessAccelData() {
 	if (ACCEL_CONFIG_SCALE == 0x18)
 		sensitivity = 2048.0;
 
-	// Data composition from raw data
-	rawAccelData_X = ((int16_t) tx_buffer[0] << 8 | tx_buffer[1]);
-	rawAccelData_Y = ((int16_t) tx_buffer[2] << 8 | tx_buffer[3]);
-	rawAccelData_Z = ((int16_t) tx_buffer[4] << 8 | tx_buffer[5]);
-
 	newMPUData.x = (float) rawAccelData_X / sensitivity;
 	newMPUData.y = (float) rawAccelData_Y / sensitivity;
 	newMPUData.z = (float) rawAccelData_Z / sensitivity;
 
-	AppendVector3Queue(&accelRawQueue, &newMPUData);
+	return newMPUData;
+}
 
-	Vector3 newFiltVal = newMPUData; //IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+/**
+ * Send the most recent XY-accelerometer and Z-gyroscope data through UART.
+ * @param handler TX UartCommHandler to send IMU data through.
+ * @return Succes (1) or fail (0)
+ */
+int8_t IMU_TransmitData(UartCommHandler *handler) {
+	char msg[12] = { 0 };
 
-	AppendVector3Queue(&accelFiltQueue, &newFiltVal);
+	Vector3 accel = accelFiltQueue.queue[NewestEntryIndex(&accelFiltQueue)];
+	Vector3 gyro = gyroFiltQueue.queue[NewestEntryIndex(&gyroFiltQueue)];
+
+	memcpy(msg, &(accel.x), sizeof(float) * 2); // Accelerometer X and Y
+	memcpy(msg + 2 * sizeof(float), &(gyro.z), sizeof(float)); // Gyro Z
+
+	return uart_transmit(handler, msg, sizeof(msg), UART_ID_ACCELGYRO);
 }
