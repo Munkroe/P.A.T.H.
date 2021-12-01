@@ -201,8 +201,6 @@ int main(void) {
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
-
-
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -214,7 +212,10 @@ int main(void) {
 //	}
 	while (1) {
 
-		//IMU_LP_Filter();
+		// Retrieve data if an IMU data request has just been issued
+		IMU_RetrieveData();
+		// Handle and process data if data retrieval has been requested and we have just received data
+		IMU_HandleReceivedData();
 
 		/* USER CODE END WHILE */
 
@@ -826,6 +827,8 @@ void updatePositionsAndVelocities() {
 	// Encoder data from top plate
 	calcOrientOutput();
 	sendOrientData();
+
+	IMU_TransmitData(&txHandler);
 }
 
 void packThe6Floats() {
@@ -1194,17 +1197,24 @@ void UpdateBatteryVoltage() {
 	batteryVoltage = adc_val * voltageMeasScaling;
 }
 
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	IMU_HandleReceivedData();
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	IMU_TransmitComplete();
+
 }
 
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	IMU_ReceiveComplete();
+
+}
 
 void Callback_1Hz() {
 
-
-
 }
 
+void Callback_1kHz() {
+	// Set the IMU read pointer to the sensor data registers
+	IMU_RequestData();
+}
 
 /* USER CODE END 4 */
 

@@ -13,11 +13,24 @@
 
 #define IMU_TX_BUFFER_SIZE 14
 
+typedef enum {
+	IMU_UNINITIALIZED,
+	IMU_IDLE,
+	IMU_REQUEST_START,
+	IMU_REQUEST_STOP,
+	IMU_RETRIEVAL_START,
+	IMU_RETRIEVAL_STOP
+} IMU_STATE;
+
 int8_t IMU_init();
 
-int8_t IMU_RetrieveData();
+int8_t IMU_TransmitComplete();
+
+int8_t IMU_ReceiveComplete();
 
 int8_t IMU_RequestData();
+
+int8_t IMU_RetrieveData();
 
 int8_t IMU_TransmitData();
 

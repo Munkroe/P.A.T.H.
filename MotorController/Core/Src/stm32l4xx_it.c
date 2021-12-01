@@ -203,8 +203,7 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
-  // Request data from IMU every millisecond
-  IMU_RequestData();
+  Callback_1kHz();
 
   /* USER CODE END SysTick_IRQn 1 */
 }

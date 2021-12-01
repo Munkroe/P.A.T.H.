@@ -94,6 +94,7 @@ void Error_Handler(void);
 void UpdateBatteryVoltage();
 void reset_odometry();
 void Callback_1Hz();
+void Callback_1kHz();
 
 /* USER CODE END EFP */
 
