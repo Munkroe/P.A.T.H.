@@ -66,9 +66,9 @@ UartCommHandler rxHandler;
 char uart_txbuffer[UART_IN_BUF_SIZE] = { 0 };
 UartCommHandler txHandler;
 
-//I2C variables
 float batteryVoltage = 0.0;
 float voltageMeasScaling = (3.47 / (4096)) * (1 + 2.63); // Voltage divider ratio - Reference voltage was found experimentally
+bool control_cmds_en = false;
 
 float spamCheckY = 0.;
 float spamCheckX = 0.;
@@ -84,18 +84,33 @@ float posPhi = 0.0;
 float posPhiPrev = 0.0;
 float velX = 0.0;
 float velY = 0.0;
+float velocity = 0.0;
 float velPhi = 0.0;
 uint8_t position[24] = { 0 };
 
-bool gyro_calibration_done = false;
-
 extern float orientAngle;
-extern Vector3Queue gyroRawQueue;
 
 uint8_t MOTORID = 2;
 
 float positionCalculationPeriod;
 float controllerPeriod;
+
+// IMU variables
+Vector3Queue *measQueue;
+
+typedef struct {
+	uint32_t time;
+	float speed;
+	Vector3 entry;
+} IMU_MeasEntry;
+
+uint32_t imu_meas_index = 0;
+IMU_MeasEntry imu_meas_arr[IMU_MEAS_AMOUNT] = { 0 };
+
+extern void (*accel_capt_callb)(Vector3*), (*gyro_capt_callb)(Vector3*);
+void (**imu_capture_callb)(Vector3*);
+extern Vector3Queue accelRawQueue;
+extern Vector3Queue gyroRawQueue;
 
 // Motor structs
 
@@ -140,13 +155,13 @@ int8_t uart_in_handle_reference(char*, uint32_t);
 int8_t uart_transmit_VectorXY(uint8_t frameid, Vector3 data);
 int8_t InitialCalibration();
 void MainLoop();
+void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
+		float wheelSpeed, uint8_t moveRepetitions);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 /**
  * @brief  The application entry point.
@@ -740,7 +755,7 @@ void uart_in_handle(char *uart_msg, uint32_t len, uint8_t id) {
 
 	if (uart_in_handle_reset(uart_msg, len))
 		return;
-	if (gyro_calibration_done) {
+	if (control_cmds_en) {
 		if (uart_in_handle_reference(uart_msg, len))
 			return;
 	}
@@ -801,14 +816,15 @@ void calcPositionAndVelocity() {
 			* TOTAL_WHEEL_TICKS;
 	controllerL.Encoder->lastTicks = controllerL.Encoder->output
 			* TOTAL_WHEEL_TICKS;
-	float dist = (distL + distR) / 2;
-	posX = posX + dist * cos(posPhi);
-	posY = posY + dist * sin(posPhi);
+	float deltaDistance = (distL + distR) / 2;
+	posX = posX + deltaDistance * cos(posPhi);
+	posY = posY + deltaDistance * sin(posPhi);
 	posPhi = posPhi + (distR - distL) / DISBETWHEEL;
 
 	velPhi = ((posPhi - posPhiPrev)) / positionCalculationPeriod;
 	velX = (posX - posXPrev) / positionCalculationPeriod;
 	velY = (posY - posYPrev) / positionCalculationPeriod;
+	velocity = deltaDistance / positionCalculationPeriod;
 
 	posPhiPrev = posPhi;
 	posXPrev = posX;
@@ -1225,15 +1241,17 @@ void MainLoop() {
 	IMU_HandleReceivedData();
 }
 
-int8_t InitialCalibration() {
-	gyro_calibration_done = false;
-
+void StopMovement() {
 	controllerL.reference = 0.0;
 	controllerR.reference = 0.0;
 
 	while (controllerL.measAngVel != 0.0 || controllerR.measAngVel != 0.0) {
 		MainLoop();
 	}
+}
+
+int8_t InitialCalibration() {
+	control_cmds_en = false;
 
 	uint32_t calStart = micros();
 	int startIndex = gyroRawQueue.pointWR;
@@ -1248,9 +1266,88 @@ int8_t InitialCalibration() {
 
 	IMU_CalibrateGyro();
 
-	gyro_calibration_done = true;
+	control_cmds_en = true;
 
 	uint32_t calDone = micros();
+}
+
+void IMU_Measurements_CaptureEntry(Vector3 *entry) {
+	IMU_MeasEntry m = { .time = micros(), .entry = *entry, .speed = velPhi };
+
+	if (imu_meas_index < IMU_MEAS_AMOUNT)
+		imu_meas_arr[imu_meas_index] = m;
+
+	if (++imu_meas_index == IMU_MEAS_AMOUNT) {
+		// Measurements done
+		*imu_capture_callb = NULL;
+		imu_capture_callb = NULL;
+	}
+}
+
+void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
+		float wheelSpeed, uint8_t moveRepetitions) {
+
+	// Reset data array
+	imu_meas_index = 0;
+	memset(imu_meas_arr, 0, IMU_MEAS_AMOUNT * sizeof(IMU_MeasEntry));
+
+	imu_capture_callb = capture_callb;
+
+	// Disable external motor control
+	control_cmds_en = false;
+
+	StopMovement();
+
+	// Start capturing data
+	*imu_capture_callb = &IMU_Measurements_CaptureEntry;
+
+	// Wait a moment
+	uint32_t startTime = HAL_GetTick();
+
+	while (HAL_GetTick() < startTime + IMU_MEAS_WAIT_TIME) {
+		MainLoop();
+	}
+
+	// Do some erratic movement
+	float sign = 1.0;
+	for (uint8_t i = 0; i < moveRepetitions; i++) {
+		if (rotate) {
+			controllerL.reference = wheelSpeed * sign;
+			controllerR.reference = wheelSpeed * -sign;
+
+			if (sign > 0) {
+				// Clock wise
+				while (controllerL.measAngVel < wheelSpeed
+						|| controllerR.measAngVel > -wheelSpeed) {
+					MainLoop();
+				}
+			} else if (sign < 0) {
+				// Counter clock wise
+				while (controllerL.measAngVel > -wheelSpeed
+						|| controllerR.measAngVel < wheelSpeed) {
+					MainLoop();
+				}
+			}
+
+			StopMovement();
+
+			sign = -sign;
+
+		} else {
+			controllerL.reference = wheelSpeed;
+			controllerR.reference = wheelSpeed;
+
+			while (controllerL.measAngVel < wheelSpeed
+					|| controllerR.measAngVel < wheelSpeed) {
+				MainLoop();
+			}
+
+			StopMovement();
+		}
+	}
+
+	// Enable external motor control
+	control_cmds_en = true;
 }
 
 /* USER CODE END 4 */

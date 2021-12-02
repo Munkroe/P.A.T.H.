@@ -5,15 +5,7 @@
  *      Author: Mikkel S. Hansen
  */
 
-#include <circle_queue_Vector3.h>
-#include <frame_comm.h>
 #include <IMU_handler.h>
-#include <main.h>
-#include <stm32l4xx_hal_def.h>
-#include <stm32l4xx_hal_i2c.h>
-#include <string.h>
-#include <sys/_stdint.h>
-#include <Vector3.h>
 
 extern I2C_HandleTypeDef hi2c3;
 
@@ -37,13 +29,14 @@ Vector3Queue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroFiltArr,
 
 Vector3 gyro_cali_offset = { .x = 0.0, .y = 0.0, .z = 0.0 };
 
+void (*accel_capt_callb)(Vector3*), (*gyro_capt_callb)(Vector3*);
+
 uint32_t imu_request_us = 0, imu_request_done_us = 0, imu_retrieve_us = 0,
 		imu_retrieve_done_us = 0, imu_handle_us = 0, imu_handle_done_us = 0;
 
 uint32_t imu_error_counter = 0;
 
 int8_t IMU_Reset();
-
 
 /**
  * Initiate IMU by configuring registers.
@@ -58,6 +51,7 @@ int8_t IMU_init() {
 	}
 
 	imu_state = IMU_IDLE;
+
 	return 1;
 }
 
@@ -182,19 +176,30 @@ int8_t IMU_HandleReceivedData() {
 	Vector3 newAccel = ConvertAccelData(accel_regs);
 	Vector3 newAngVel = ConvertGyroData(gyro_regs);
 
-	// Apply filter and append queues
-	AppendVector3Queue(&accelRawQueue, &newAccel);
-	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
-	AppendVector3Queue(&accelFiltQueue, &newAccel);
 
-	AppendVector3Queue(&gyroRawQueue, &newAngVel);
+
+
+	// Apply filter and append queues
+	// Accelerometer
+	AppendQueue(&accelRawQueue, &newAccel);
+	if (accel_capt_callb != NULL) accel_capt_callb(&newAccel);
+	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	AppendQueue(&accelFiltQueue, &newAccel);
+
+	// Gyroscope
+	AppendQueue(&gyroRawQueue, &newAngVel);
 
 	newAngVel.x -= gyro_cali_offset.x;
 	newAngVel.y -= gyro_cali_offset.y;
 	newAngVel.z -= gyro_cali_offset.z;
 
-	newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
-	AppendVector3Queue(&gyroFiltQueue, &newAngVel);
+	if (gyro_capt_callb != NULL) gyro_capt_callb(&newAngVel);
+
+	//newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
+	AppendQueue(&gyroFiltQueue, &newAngVel);
+
+
+
 
 	imu_state = IMU_IDLE;
 

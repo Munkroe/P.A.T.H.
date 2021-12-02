@@ -6,23 +6,24 @@
  */
 #include <circle_queue_Vector3.h>
 
-int Vector3QueueFull(Vector3Queue *q) {
+bool IsQueueFull(Vector3Queue *q) {
 	return (((q->pointWR) % q->queueLength) == q->pointRD && (q->pointWR) != 0);
 }
 
-int Vector3QueueEmpty(Vector3Queue *q) {
+bool IsQueueEmpty(Vector3Queue *q) {
 	return (q->pointWR == q->pointRD);
 }
 
-int AppendVector3Queue(Vector3Queue *q, Vector3 *data) {
+int AppendQueue(Vector3Queue *q, Vector3 *data) {
 
-	if (Vector3QueueFull(q)) {
+	if (IsQueueFull(q)) {
 		return 0;
 	} else {
 		q->queue[q->pointWR] = *data;
 
 		if ((q->pointWR + 1) == q->queueLength) {
 			q->pointWR = 0;
+			if (q->full_cb_ptr != NULL) q->full_cb_ptr(q); // Queue full callback
 		} else {
 			q->pointWR += 1;
 		}
@@ -31,8 +32,8 @@ int AppendVector3Queue(Vector3Queue *q, Vector3 *data) {
 	return 1;
 }
 
-int ReadVector3Queue(Vector3Queue *q, Vector3 *data) {
-	if (Vector3QueueEmpty(q)) {
+int ReadFromQueue(Vector3Queue *q, Vector3 *data) {
+	if (IsQueueEmpty(q)) {
 		return 0;
 	} else {
 		*data = q->queue[q->pointRD];
@@ -63,3 +64,5 @@ int UnreadElements(Vector3Queue *q) {
 		return 1;
 	}
 }
+
+//GENERATE_STRUCT_QUEUE_SOURCE(Vector3Queue, Vector3)

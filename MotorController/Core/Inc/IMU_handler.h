@@ -10,6 +10,15 @@
 
 #include "MPU6050.h"
 #include "IMU_filter.h"
+#include <circle_queue_Vector3.h>
+#include <frame_comm.h>
+
+#include <main.h>
+#include <stm32l4xx_hal_def.h>
+#include <stm32l4xx_hal_i2c.h>
+#include <string.h>
+#include <sys/_stdint.h>
+#include <Vector3.h>
 
 #define IMU_TX_BUFFER_SIZE 14
 #define MPU_QUEUE_LENGTH 50

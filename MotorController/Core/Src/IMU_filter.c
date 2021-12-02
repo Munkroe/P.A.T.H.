@@ -53,7 +53,7 @@ int8_t IMU_LP_Filter_test(double signal_freq, double sample_freq,
 		// Generate input sequence
 		double val = sin(2.0 * M_PI * signal_freq * i * sample_time);
 		Vector3 axisVal = { val, val, val };
-		AppendVector3Queue(rawQueue, &axisVal);
+		AppendQueue(rawQueue, &axisVal);
 
 		// Compute output sequence
 		IMU_LP_Filter_calc_next(rawQueue, filtQueue);
