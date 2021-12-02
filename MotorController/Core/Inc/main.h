@@ -135,7 +135,7 @@ void Callback_1kHz();
 #define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define WHEELDIA 0.085
+#define WHEELDIA 0.086
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
 #define UART_IN_BUF_SIZE 256

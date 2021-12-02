@@ -184,7 +184,7 @@ int8_t IMU_HandleReceivedData() {
 
 	// Apply filter and append queues
 	AppendVector3Queue(&accelRawQueue, &newAccel);
-	//newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
 	AppendVector3Queue(&accelFiltQueue, &newAccel);
 
 	AppendVector3Queue(&gyroRawQueue, &newAngVel);
@@ -193,7 +193,7 @@ int8_t IMU_HandleReceivedData() {
 	newAngVel.y -= gyro_cali_offset.y;
 	newAngVel.z -= gyro_cali_offset.z;
 
-	//newAngVel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
 	AppendVector3Queue(&gyroFiltQueue, &newAngVel);
 
 	imu_state = IMU_IDLE;

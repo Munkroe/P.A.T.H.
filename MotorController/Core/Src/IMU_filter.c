@@ -8,13 +8,12 @@
 #include "IMU_filter.h"
 
 //LP filter coefficients. Calculate based on T and W_c
-float A = 0.211376056536034;
-float B = 0.581295066636667;
+float A = 1.1403* pow(10, -4);
+float B = 1.1891* pow(10, -4);
 float C = 0;
-float D = 0.043213918263772;
-float E = -0.247478160354501;
-float F = 0.398367669019004;
-
+float D = 0.8819;
+float E = -2.7565;
+float F = 2.8744;
 
 
 // Known filter response sequences
