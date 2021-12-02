@@ -18,6 +18,8 @@ int8_t uart_init_tx(UartCommHandler *handler) {
 	if (handler->huart->Init.Mode & UART_MODE_TX_RX
 			|| handler->huart->Init.Mode & UART_MODE_TX) {
 
+
+
 		handler->uart_tx_dmaStart = 0;
 		handler->uart_tx_dmaEnd = 0;
 		handler->uart_tx_queueEnd = 0;
@@ -25,6 +27,7 @@ int8_t uart_init_tx(UartCommHandler *handler) {
 		// TODO: Make sure it is in normal mode
 		// TODO: Make sure USART has interrupts enabled in stm32l4xx_it
 		// TODO: Move HAL_DMA_INIT(); here
+		HAL_DMA_Init(handler->huart->hdmatx);
 	} else
 		return 0;
 	return 1;

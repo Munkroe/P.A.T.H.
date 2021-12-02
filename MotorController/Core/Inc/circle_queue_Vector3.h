@@ -8,19 +8,13 @@
 #ifndef CIRCLE_QUEUE_STRUCT_H
 #define CIRCLE_QUEUE_STRUCT_H
 
-#include "MPU6050.h"
-
-//struct CAN_QUEUE_DATA {
-//	uint32_t ID;
-//	uint8_t data[PACKAGE_SIZE];
-//};
-
+#include "stdint.h"
+#include "Vector3.h"
 
 typedef struct StructQueue {
 	uint16_t pointRD, pointWR, queueLength;
 	Vector3* queue;
 } Vector3Queue;
-
 
 int Vector3QueueFull(Vector3Queue *q);
 int Vector3QueueEmpty(Vector3Queue *q);

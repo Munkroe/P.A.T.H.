@@ -32,14 +32,14 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Vector3.h"
 #include "stdbool.h"
 #include "math.h"
 #include "microsecond_counter.h"
 #include "orientation.h"
 #include "frame_comm.h"
-#include "MPU6050.h"
-
-
+#include "IMU_handler.h"
+#include "IMU_filter.h"
 
 /* USER CODE END Includes */
 
@@ -93,6 +93,8 @@ void Error_Handler(void);
 
 void UpdateBatteryVoltage();
 void reset_odometry();
+void Callback_1Hz();
+void Callback_1kHz();
 
 /* USER CODE END EFP */
 
@@ -133,11 +135,10 @@ void reset_odometry();
 #define DIR_R2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define MPU_QUEUE_LENGTH 50
 #define WHEELDIA 0.085
 #define DISBETWHEEL 0.3637
 #define TOTAL_WHEEL_TICKS 1920
-#define UART_IN_BUF_SIZE 8192
+#define UART_IN_BUF_SIZE 256
 #define MOTOR_VOLTAGE_MAX 13.0
 #define MOTOR_VOLTAGE_STALL 2.5
 #define MOTOR_ANGULAR_VELOCITY_MIN 0.001
@@ -146,6 +147,7 @@ void reset_odometry();
 #define UART_ID_MOTOR 2
 #define UART_ID_ORIENTATION 3
 #define UART_ID_ACCELGYRO 4
+#define GYRO_CALIBRATION_TIME_MS 100
 
 /* USER CODE END Private defines */
 
