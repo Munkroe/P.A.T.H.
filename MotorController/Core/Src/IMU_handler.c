@@ -27,7 +27,7 @@ Vector3Queue accelFiltQueue = { .pointRD = 0, .pointWR = 0, .queue =
 Vector3Queue gyroFiltQueue = { .pointRD = 0, .pointWR = 0, .queue = gyroFiltArr,
 		.queueLength = MPU_QUEUE_LENGTH };
 
-Vector3 gyro_cali_offset = { .x = 0.0, .y = 0.0, .z = 0.0 };
+Vector3 accel_cali_offset = { 0 }, gyro_cali_offset = { 0 };
 
 void (*accel_capt_callb)(Vector3*), (*gyro_capt_callb)(Vector3*);
 
@@ -37,6 +37,7 @@ uint32_t imu_request_us = 0, imu_request_done_us = 0, imu_retrieve_us = 0,
 uint32_t imu_error_counter = 0;
 
 int8_t IMU_Reset();
+Vector3 IMU_CalculateAverage(Vector3Queue *rawQueue);
 
 /**
  * Initiate IMU by configuring registers.
@@ -55,31 +56,49 @@ int8_t IMU_init() {
 	return 1;
 }
 
-void IMU_CalibrateGyro() {
+void IMU_CalculateOffsets() {
+	accel_cali_offset = IMU_CalculateAverage(&accelRawQueue);
+	gyro_cali_offset = IMU_CalculateAverage(&gyroRawQueue);
+
+	// Reset queues to avoid filter reacting on previous uncalculated values
+	memset(accelRawArr, 0, sizeof(accelRawArr));
+	memset(accelFiltArr, 0, sizeof(accelFiltArr));
+	memset(gyroRawArr, 0, sizeof(gyroRawArr));
+	memset(gyroFiltArr, 0, sizeof(gyroFiltArr));
+}
+
+Vector3 IMU_CalculateAverage(Vector3Queue *rawQueue) {
 	// Find the index at which the average summation should stop, in case not the whole queue has been filled
-	uint32_t lastIndex = gyroRawQueue.queueLength-1;
-	Vector3 v3LastIndex = gyroRawQueue.queue[gyroRawQueue.queueLength-1];
-	if (v3LastIndex.x == 0.0 && v3LastIndex.y == 0.0 && v3LastIndex.z == 0.0) lastIndex = NewestEntryIndex(&gyroRawQueue);
+	uint32_t lastIndex = rawQueue->queueLength - 1;
+	Vector3 v3LastIndex = rawQueue->queue[rawQueue->queueLength - 1];
+	if (v3LastIndex.x == 0.0 && v3LastIndex.y == 0.0 && v3LastIndex.z == 0.0)
+		lastIndex = NewestEntryIndex(&rawQueue);
 
 	// Summation of all queue elements
 	uint16_t entries = lastIndex + 1;
 	Vector3 sum = { 0 };
 	for (uint16_t i = 0; i < entries; i++) {
-		Vector3 entry = gyroRawQueue.queue[i];
+		Vector3 entry = rawQueue->queue[i];
 		sum.x += entry.x;
 		sum.y += entry.y;
 		sum.z += entry.z;
 	}
 
+	Vector3 avg = { 0 };
+
 	// Calculate average
-	gyro_cali_offset.x = sum.x / entries;
-	gyro_cali_offset.y = sum.y / entries;
-	gyro_cali_offset.z = sum.z / entries;
+	avg.x = sum.x / entries;
+	avg.y = sum.y / entries;
+	avg.z = sum.z / entries;
+
+	return avg;
 }
 
 int8_t IMU_Reset() {
-	if(HAL_I2C_DeInit(&hi2c3) != HAL_OK) return 0;
-	if(HAL_I2C_Init(&hi2c3) != HAL_OK) return 0;
+	if (HAL_I2C_DeInit(&hi2c3) != HAL_OK)
+		return 0;
+	if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+		return 0;
 	return 1;
 }
 
@@ -106,7 +125,6 @@ int8_t IMU_RequestData() {
 		imu_error_counter++;
 		//if (hi2c3.State != HAL_I2C_STATE_ABORT)
 
-
 		imu_state = IMU_IDLE;
 		return 0;
 	}
@@ -119,7 +137,6 @@ int8_t IMU_RequestData() {
 		}
 		return 0;
 	}
-
 
 	imu_request_done_us = micros();
 
@@ -168,38 +185,40 @@ int8_t IMU_HandleReceivedData() {
 	uint8_t temp_regs[2] = { 0 };
 	uint8_t gyro_regs[6] = { 0 };
 
-	memcpy(accel_regs, 	rx_buffer, 		6);
-	memcpy(temp_regs, 	rx_buffer + 6, 	2);
-	memcpy(gyro_regs, 	rx_buffer + 8, 	6);
+	memcpy(accel_regs, rx_buffer, 6);
+	memcpy(temp_regs, rx_buffer + 6, 2);
+	memcpy(gyro_regs, rx_buffer + 8, 6);
 
 	// Convert register data to Vector3
 	Vector3 newAccel = ConvertAccelData(accel_regs);
 	Vector3 newAngVel = ConvertGyroData(gyro_regs);
 
-
-
-
 	// Apply filter and append queues
 	// Accelerometer
+	newAccel.x -= accel_cali_offset.x;
+	newAccel.y -= accel_cali_offset.y;
+	newAccel.z -= accel_cali_offset.z;
+
 	AppendQueue(&accelRawQueue, &newAccel);
-	if (accel_capt_callb != NULL) accel_capt_callb(&newAccel);
+
+	if (accel_capt_callb != NULL)
+		accel_capt_callb(&newAccel);
+
 	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
 	AppendQueue(&accelFiltQueue, &newAccel);
 
 	// Gyroscope
-	AppendQueue(&gyroRawQueue, &newAngVel);
-
 	newAngVel.x -= gyro_cali_offset.x;
 	newAngVel.y -= gyro_cali_offset.y;
 	newAngVel.z -= gyro_cali_offset.z;
 
-	if (gyro_capt_callb != NULL) gyro_capt_callb(&newAngVel);
+	AppendQueue(&gyroRawQueue, &newAngVel);
+
+	if (gyro_capt_callb != NULL)
+		gyro_capt_callb(&newAngVel);
 
 	//newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
 	AppendQueue(&gyroFiltQueue, &newAngVel);
-
-
-
 
 	imu_state = IMU_IDLE;
 

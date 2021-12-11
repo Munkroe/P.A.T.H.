@@ -50,6 +50,6 @@ Vector3 ConvertAccelData(uint8_t *regs);
 
 Vector3 ConvertGyroData(uint8_t *regs);
 
-void IMU_CalibrateGyro();
+void IMU_CalculateOffsets();
 
 #endif /* INC_IMU_HANDLER_H_ */

@@ -109,8 +109,6 @@ IMU_MeasEntry imu_meas_arr[IMU_MEAS_AMOUNT] = { 0 };
 
 extern void (*accel_capt_callb)(Vector3*), (*gyro_capt_callb)(Vector3*);
 void (**imu_capture_callb)(Vector3*);
-extern Vector3Queue accelRawQueue;
-extern Vector3Queue gyroRawQueue;
 
 // Motor structs
 
@@ -156,7 +154,9 @@ int8_t uart_transmit_VectorXY(uint8_t frameid, Vector3 data);
 int8_t InitialCalibration();
 void MainLoop();
 void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
-		float wheelSpeed, uint8_t moveRepetitions);
+		float movePeriod, float wheelSpeed, uint8_t moveRepetitions);
+void MainLoopWaitMicros(uint32_t wait_us);
+void MainLoopWaitMillis(uint32_t wait_ms);
 
 /* USER CODE END PFP */
 
@@ -228,7 +228,12 @@ int main(void) {
 
 	InitialCalibration();
 
+
+	float freq = 1;
 	while (1) {
+
+
+		IMU_StartMeasurements(&accel_capt_callb, true, 1/freq, 30, 4);
 
 		MainLoop();
 
@@ -1241,6 +1246,22 @@ void MainLoop() {
 	IMU_HandleReceivedData();
 }
 
+void MainLoopWaitMicros(uint32_t wait_us) {
+	uint32_t startTime = micros();
+
+	while (micros() < startTime + wait_us) {
+		MainLoop();
+	}
+}
+
+void MainLoopWaitMillis(uint32_t wait_ms) {
+	uint32_t startTime = HAL_GetTick();
+
+	while (HAL_GetTick() < startTime + wait_ms) {
+		MainLoop();
+	}
+}
+
 void StopMovement() {
 	controllerL.reference = 0.0;
 	controllerR.reference = 0.0;
@@ -1253,26 +1274,20 @@ void StopMovement() {
 int8_t InitialCalibration() {
 	control_cmds_en = false;
 
-	uint32_t calStart = micros();
-	int startIndex = gyroRawQueue.pointWR;
 	uint32_t start_time = HAL_GetTick();
 
 	// Wait till while the gyro settles
-	while (HAL_GetTick() < start_time + GYRO_CALIBRATION_TIME_MS) {
+	while (HAL_GetTick() < start_time + IMU_CALIBRATION_TIME_MS) {
 		MainLoop();
 	}
 
-	uint32_t queFilled = micros();
-
-	IMU_CalibrateGyro();
+	IMU_CalculateOffsets();
 
 	control_cmds_en = true;
-
-	uint32_t calDone = micros();
 }
 
 void IMU_Measurements_CaptureEntry(Vector3 *entry) {
-	IMU_MeasEntry m = { .time = micros(), .entry = *entry, .speed = velPhi };
+	IMU_MeasEntry m = { .time = micros(), .entry = *entry, .speed = (imu_capture_callb == &gyro_capt_callb ? velPhi : velocity) };
 
 	if (imu_meas_index < IMU_MEAS_AMOUNT)
 		imu_meas_arr[imu_meas_index] = m;
@@ -1285,7 +1300,7 @@ void IMU_Measurements_CaptureEntry(Vector3 *entry) {
 }
 
 void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
-		float wheelSpeed, uint8_t moveRepetitions) {
+		float movePeriod, float wheelSpeed, uint8_t moveRepetitions) {
 
 	// Reset data array
 	imu_meas_index = 0;
@@ -1302,49 +1317,25 @@ void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
 	*imu_capture_callb = &IMU_Measurements_CaptureEntry;
 
 	// Wait a moment
-	uint32_t startTime = HAL_GetTick();
-
-	while (HAL_GetTick() < startTime + IMU_MEAS_WAIT_TIME) {
-		MainLoop();
-	}
+	MainLoopWaitMillis(IMU_MEAS_WAIT_TIME);
 
 	// Do some erratic movement
 	float sign = 1.0;
+	uint32_t period_us = (uint32_t) ((movePeriod / 2.0) * 1000000);
+	uint32_t endTime = micros() + period_us;
 	for (uint8_t i = 0; i < moveRepetitions; i++) {
-		if (rotate) {
-			controllerL.reference = wheelSpeed * sign;
-			controllerR.reference = wheelSpeed * -sign;
+		controllerL.reference = wheelSpeed * sign;
+		controllerR.reference = wheelSpeed * sign * (rotate ? -1.0 : 1.0);
 
-			if (sign > 0) {
-				// Clock wise
-				while (controllerL.measAngVel < wheelSpeed
-						|| controllerR.measAngVel > -wheelSpeed) {
-					MainLoop();
-				}
-			} else if (sign < 0) {
-				// Counter clock wise
-				while (controllerL.measAngVel > -wheelSpeed
-						|| controllerR.measAngVel < wheelSpeed) {
-					MainLoop();
-				}
-			}
-
-			StopMovement();
-
-			sign = -sign;
-
-		} else {
-			controllerL.reference = wheelSpeed;
-			controllerR.reference = wheelSpeed;
-
-			while (controllerL.measAngVel < wheelSpeed
-					|| controllerR.measAngVel < wheelSpeed) {
-				MainLoop();
-			}
-
-			StopMovement();
+		while (micros() < endTime) {
+			MainLoop();
 		}
+		endTime += period_us;
+
+		sign = -sign;
 	}
+
+	StopMovement();
 
 	// Enable external motor control
 	control_cmds_en = true;
