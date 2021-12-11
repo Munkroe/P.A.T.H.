@@ -195,29 +195,29 @@ int8_t IMU_HandleReceivedData() {
 
 	// Apply filter and append queues
 	// Accelerometer
-//	newAccel.x -= accel_cali_offset.x;
-//	newAccel.y -= accel_cali_offset.y;
-//	newAccel.z -= accel_cali_offset.z;
+	newAccel.x -= accel_cali_offset.x;
+	newAccel.y -= accel_cali_offset.y;
+	newAccel.z -= accel_cali_offset.z;
 
 	AppendQueue(&accelRawQueue, &newAccel);
 
 	if (accel_capt_callb != NULL)
 		accel_capt_callb(&newAccel);
 
-//	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
+	newAccel = IMU_LP_Filter_calc_next(&accelRawQueue, &accelFiltQueue);
 	AppendQueue(&accelFiltQueue, &newAccel);
 
 	// Gyroscope
-//	newAngVel.x -= gyro_cali_offset.x;
-//	newAngVel.y -= gyro_cali_offset.y;
-//	newAngVel.z -= gyro_cali_offset.z;
+	newAngVel.x -= gyro_cali_offset.x;
+	newAngVel.y -= gyro_cali_offset.y;
+	newAngVel.z -= gyro_cali_offset.z;
 
 	AppendQueue(&gyroRawQueue, &newAngVel);
 
 	if (gyro_capt_callb != NULL)
 		gyro_capt_callb(&newAngVel);
 
-	//newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
+	newAngVel = IMU_LP_Filter_calc_next(&gyroRawQueue, &gyroFiltQueue);
 	AppendQueue(&gyroFiltQueue, &newAngVel);
 
 	imu_state = IMU_IDLE;
