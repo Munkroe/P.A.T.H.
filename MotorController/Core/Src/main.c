@@ -228,11 +228,6 @@ int main(void) {
 
 	InitialCalibration();
 
-	float freq = 10;
-	bool test = false;
-	if (test)
-		IMU_StartMeasurements(&gyro_capt_callb, true, 1 / freq, 30,
-				freq * 4 + 1);
 	while (1) {
 		MainLoop();
 
