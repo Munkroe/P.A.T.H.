@@ -228,13 +228,12 @@ int main(void) {
 
 	InitialCalibration();
 
-
-	float freq = 1;
+	float freq = 10;
+	bool test = false;
+	if (test)
+		IMU_StartMeasurements(&gyro_capt_callb, true, 1 / freq, 30,
+				freq * 4 + 1);
 	while (1) {
-
-
-		IMU_StartMeasurements(&accel_capt_callb, true, 1/freq, 30, 4);
-
 		MainLoop();
 
 		/* USER CODE END WHILE */
@@ -1287,7 +1286,8 @@ int8_t InitialCalibration() {
 }
 
 void IMU_Measurements_CaptureEntry(Vector3 *entry) {
-	IMU_MeasEntry m = { .time = micros(), .entry = *entry, .speed = (imu_capture_callb == &gyro_capt_callb ? velPhi : velocity) };
+	IMU_MeasEntry m = { .time = micros(), .entry = *entry, .speed = (
+			imu_capture_callb == &gyro_capt_callb ? velPhi : velocity) };
 
 	if (imu_meas_index < IMU_MEAS_AMOUNT)
 		imu_meas_arr[imu_meas_index] = m;
@@ -1322,15 +1322,15 @@ void IMU_StartMeasurements(void (**capture_callb)(Vector3*), bool rotate,
 	// Do some erratic movement
 	float sign = 1.0;
 	uint32_t period_us = (uint32_t) ((movePeriod / 2.0) * 1000000);
-	uint32_t endTime = micros() + period_us;
+	uint32_t endTime = micros();
 	for (uint8_t i = 0; i < moveRepetitions; i++) {
 		controllerL.reference = wheelSpeed * sign;
 		controllerR.reference = wheelSpeed * sign * (rotate ? -1.0 : 1.0);
 
+		endTime += period_us;
 		while (micros() < endTime) {
 			MainLoop();
 		}
-		endTime += period_us;
 
 		sign = -sign;
 	}
