@@ -1,0 +1,11 @@
+<launch>
+
+   
+
+   <node pkg="robot_setup_tf" type="laser_tf_broadcaster.py" name="laser_tf_broadcaster"></node>
+   
+   <node pkg="robot_setup_tf" type="imu_publisher.py" name="imu_publisher"></node>
+   
+   <include file="$(find rplidar_ros)/launch/rplidar.launch"></include>
+
+</launch>

@@ -1,0 +1,14 @@
+digraph G {
+node [shape=box];
+"duck1" [label="duck1"];
+"duck1_lidar" [label="duck1_lidar"];
+"duck1_wheel1" [label="duck1_wheel1"];
+"duck1_wheel2" [label="duck1_wheel2"];
+node [shape=ellipse, color=blue, fontcolor=blue];
+"duck1" -> "duck1_lidar_joint" [label="xyz: 0 0 0.076 \nrpy: 0 -0 0"]
+"duck1_lidar_joint" -> "duck1_lidar"
+"duck1" -> "duck1_wheel1_joint" [label="xyz: 0 0.1885 0.01 \nrpy: 1.5708 -0 0"]
+"duck1_wheel1_joint" -> "duck1_wheel1"
+"duck1" -> "duck1_wheel2joint" [label="xyz: 0 -0.1885 0.01 \nrpy: -1.5708 0 0"]
+"duck1_wheel2joint" -> "duck1_wheel2"
+}

@@ -1,0 +1,34 @@
+digraph G {
+"base_link" -> "testBed"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"odom" -> "base_link"[label="Broadcaster: /gazebo\nAverage rate: 22.593 Hz\nMost recent transform: 1639312738.453 ( 0.063 sec old)\nBuffer length: 4.869 sec\n"];
+"duck1" -> "duck1_castorsupport_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"framemount_1_link" -> "duck1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck2" -> "duck2_castorsupport_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"framemount_2_link" -> "duck2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck1" -> "duck1_castorsupport_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"duck1" -> "duck1_lidar"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"duck2" -> "duck2_castorsupport_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"duck2" -> "duck2_lidar"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "framemount_1_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "framemount_2_link"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "testbed_wheelLink_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "testbed_wheelLink_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "testbed_wheelLink_3"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"testBed" -> "testbed_wheelLink_4"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10000.000 Hz\nMost recent transform: 0.000 ( 1639312738.516 sec old)\nBuffer length: 0.000 sec\n"];
+"duck1_castorsupport_1" -> "duck1_castorwheel_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck1_castorsupport_2" -> "duck1_castorwheel_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck1" -> "duck1_wheel1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck1" -> "duck1_wheel2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck2_castorsupport_1" -> "duck2_castorwheel_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck2_castorsupport_2" -> "duck2_castorwheel_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck2" -> "duck2_wheel1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"duck2" -> "duck2_wheel2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"testbed_wheelLink_1" -> "testbed_wheel_1"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"testbed_wheelLink_2" -> "testbed_wheel_2"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"testbed_wheelLink_3" -> "testbed_wheel_3"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+"testbed_wheelLink_4" -> "testbed_wheel_4"[label="Broadcaster: /robot_state_publisher\nAverage rate: 10.214 Hz\nMost recent transform: 1639312738.463 ( 0.053 sec old)\nBuffer length: 4.798 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1639312738.516"[ shape=plaintext ] ;
+ }->"odom";
+}

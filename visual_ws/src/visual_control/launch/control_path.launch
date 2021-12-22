@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="teleoppath" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
+    <remap from="/cmd_vel" to="/cmd_vel/path"/>
+    </node>  
+    <node name="robot_control_node" pkg="visual_control" type="robot_control.py"/>
+</launch>

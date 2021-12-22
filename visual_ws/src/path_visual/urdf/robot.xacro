@@ -1,0 +1,794 @@
+<?xml version="1.0"?>
+<robot name="PATH" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+  <xacro:property name="testbed_h" value="0.62"/><!--Faktisk d-->
+  <xacro:property name="testbed_w" value="1.4"/> 
+  <xacro:property name="testbed_d" value="0.45"/> <!--Faktisk h-->
+  <xacro:property name="testbed_m" value="11.26"/>
+
+  
+  <xacro:property name="testbed_wheellink_h" value="0.038"/> <!--Faktisk d-->
+  <xacro:property name="testbed_wheellink_w" value="0.057"/> 
+  <xacro:property name="testbed_wheellink_d" value="0.11"/> <!--Faktisk h-->
+  <xacro:property name="testbed_wheellink_m" value="0.135"/>
+  <xacro:property name="testbed_wheellink_y" value="0.271"/>
+  <xacro:property name="testbed_wheellink_x" value="0.6515"/>
+  <xacro:property name="testbed_wheellink_z" value="0.115"/>
+
+  
+  <xacro:property name="testbed_wheel_r" value="0.03"/>
+  <xacro:property name="testbed_wheel_h" value="0.0136"/>
+  <xacro:property name="testbed_wheel_m" value="0.270"/>
+  <xacro:property name="testbed_wheel_z" value="-0.085"/>
+  <xacro:property name="testbed_wheel_friction" value="1"/>
+
+  <xacro:property name="frame_mount_1_y" value="0"/>
+  <xacro:property name="frame_mount_1_x" value="0.7"/>
+  <xacro:property name="frame_mount_1_z" value="0.1385"/>
+  <xacro:property name="frame_mount_1_w" value="0.02"/>
+  <xacro:property name="frame_mount_1_h" value="0.02"/> <!--Faktisk d-->
+  <xacro:property name="frame_mount_1_d" value="0.063"/> <!--Faktisk h-->
+  <xacro:property name="frame_mount_1_m" value="0.135"/>
+
+  <xacro:property name="frame_mount_robot_1_r" value="0.02"/>
+  <xacro:property name="frame_mount_robot_1_l" value="0.02"/>
+  <xacro:property name="frame_mount_robot_1_z" value="0.0315"/>
+
+
+  <xacro:property name="offset_x_duck2" value="-0.111"/>
+  <xacro:property name="offset_x_duck1" value="0.111"/>
+  <xacro:property name="offset_z_duck" value="-0.105"/>
+
+
+  <material name ="blue">
+    <color rgba="0 0 0.8 1"/>
+  </material>
+
+   <material name ="red">
+    <color rgba="0.8 0 0 1"/>
+  </material>
+
+   <material name ="brown">
+    <color rgba="${193/255} ${154/255} ${107/255} 1"/>
+  </material>
+
+  
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${2.0*m*(r*r)/5.0}" ixy="0.0" ixz="0.0" iyy="${2.0*m*(r*r)/5.0}" iyz="0.0" izz="${2.0*m*(r*r)/5.0}"/>
+    </inertial>
+  </xacro:macro>
+  
+  
+  <xacro:macro name="box_inertia" params="m w h d">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m / 12.0 * (d*d + h*h)}" ixy="0.0" ixz="0.0" iyy="${m / 12.0 * (w*w + h*h)}" iyz="0.0" izz="${m / 12.0 * (w*w + d*d)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+h*h)/12}" ixy = "0" ixz = "0" iyy="${m*(3*r*r+h*h)/12}" iyz = "0" izz="${m*r*r/2}"/> 
+    </inertial>
+  </xacro:macro>
+  
+
+  <link name="base_link">
+  </link>
+  
+  <link name="testBed">
+  <!--<xacro:box_inertia m="${testbed_m}" w="${testbed_w}" h="${testbed_h}" d="${testbed_d}"/>-->
+  <visual>
+    <origin xyz="0 0 0.395" rpy="0 0 0"/>
+    <geometry>
+      <box size="${testbed_w} ${testbed_h} ${testbed_d}"/>
+    </geometry>
+  </visual>
+   <collision>
+      <origin xyz="0 0 0.395" rpy="0 0 0"/>
+      <geometry>
+        <box size="${testbed_w} ${testbed_h} ${testbed_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="testBed"/>
+</joint>
+  
+  <link name="testbed_wheelLink_1">
+  <xacro:box_inertia m="${testbed_wheellink_m}" w="${testbed_wheellink_w}" h="${testbed_wheellink_h}" d="${testbed_wheellink_d}"/>
+  <visual>
+    <material name = "brown"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+    </geometry>
+  </visual>
+   <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="testbed_wheelLink_1_joint" type="fixed">
+    <origin xyz="${testbed_wheellink_x} ${testbed_wheellink_y} ${testbed_wheellink_z}" rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="testbed_wheelLink_1"/>
+  </joint>
+
+  <link name="testbed_wheelLink_2">
+  <xacro:box_inertia m="${testbed_wheellink_m}" w="${testbed_wheellink_w}" h="${testbed_wheellink_h}" d="${testbed_wheellink_d}"/>
+  <visual>
+    <material name = "brown"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+    </geometry>
+  </visual>
+   <collision>
+   <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+<joint name="testbed_wheelLink_2_joint" type="fixed">
+    <origin xyz="-${testbed_wheellink_x} ${testbed_wheellink_y} ${testbed_wheellink_z}" rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="testbed_wheelLink_2"/>
+  </joint>
+
+  <link name="testbed_wheelLink_3">
+  <xacro:box_inertia m="${testbed_wheellink_m}" w="${testbed_wheellink_w}" h="${testbed_wheellink_h}" d="${testbed_wheellink_d}"/>
+  <visual>
+    <material name = "brown"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+    </geometry>
+  </visual>
+   <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+
+  <joint name="testbed_wheelLink_3_joint" type="fixed">
+    <origin xyz="${testbed_wheellink_x} -${testbed_wheellink_y} ${testbed_wheellink_z}" rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="testbed_wheelLink_3"/>
+  </joint>
+  
+  <link name="testbed_wheelLink_4">
+  <xacro:box_inertia m="${testbed_wheellink_m}" w="${testbed_wheellink_w}" h="${testbed_wheellink_h}" d="${testbed_wheellink_d}"/>
+  <visual>
+    <material name = "brown"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+    </geometry>
+  </visual>
+   <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${testbed_wheellink_w} ${testbed_wheellink_h} ${testbed_wheellink_d}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="testbed_wheelLink_4_joint" type="fixed">
+     <origin xyz="-${testbed_wheellink_x} -${testbed_wheellink_y} ${testbed_wheellink_z}" rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="testbed_wheelLink_4"/>
+  </joint>
+  
+  <link name="testbed_wheel_1">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="${testbed_wheel_h}" radius="${testbed_wheel_r}"/>
+      </geometry>
+    </visual>
+    
+    <surface>
+      <friction>
+        <ode>
+          <mu>${testbed_wheel_friction}</mu>
+        </ode>
+      </friction>
+    </surface>
+    <xacro:sphere_inertia m="${testbed_wheel_m}" r="${testbed_wheel_r}"/>
+  </link>
+  
+  <link name="testbed_wheel_2">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="${testbed_wheel_h}" radius="${testbed_wheel_r}"/>
+      </geometry>
+    </visual>
+    
+    <surface>
+      <friction>
+        <ode>
+          <mu>${testbed_wheel_friction}</mu>
+        </ode>
+      </friction>
+    </surface>
+    <xacro:sphere_inertia m="${testbed_wheel_m}" r="${testbed_wheel_r}"/>
+  </link>
+  
+  <link name="testbed_wheel_3">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="${testbed_wheel_h}" radius="${testbed_wheel_r}"/>
+      </geometry>
+    </visual>
+    
+    <surface>
+      <friction>
+        <ode>
+          <mu>${testbed_wheel_friction}</mu>
+          <mu2>${testbed_wheel_friction}</mu2>
+          <slip1>${testbed_wheel_friction}</slip1>
+          <slip2>${testbed_wheel_friction}</slip2>
+        </ode>
+      </friction>
+    </surface>
+    <xacro:sphere_inertia m="${testbed_wheel_m}" r="${testbed_wheel_r}"/>
+  </link>
+  
+  <link name="testbed_wheel_4">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="${testbed_wheel_h}" radius="${testbed_wheel_r}"/>
+      </geometry>
+    </visual>
+    
+    <surface>
+      <friction>
+        <ode>
+          <mu>${testbed_wheel_friction}</mu>
+          <mu2>${testbed_wheel_friction}</mu2>
+          <slip1>${testbed_wheel_friction}</slip1>
+          <slip2>${testbed_wheel_friction}</slip2>
+        </ode>
+      </friction>
+    </surface>
+    <xacro:sphere_inertia m="${testbed_wheel_m}" r="${testbed_wheel_r}"/>
+  </link>
+  
+  <joint name="testbed_wheel1_joint" type="continuous">
+    <origin xyz="0 0 ${testbed_wheel_z}" rpy="0 0 0"/>
+    <parent link="testbed_wheelLink_1"/>
+    <child link="testbed_wheel_1"/>
+  </joint>
+  
+  <joint name="testbed_wheel2_joint" type="continuous">
+    <origin xyz="0 0 ${testbed_wheel_z}" rpy="0 0 0"/>
+    <parent link="testbed_wheelLink_2"/>
+    <child link="testbed_wheel_2"/>
+  </joint>
+  
+    <joint name="testbed_wheel3_joint" type="continuous">
+    <origin xyz="0 0 ${testbed_wheel_z}" rpy="0 0 0"/>
+    <parent link="testbed_wheelLink_3"/>
+    <child link="testbed_wheel_3"/>
+  </joint>
+  
+  <joint name="testbed_wheel4_joint" type="continuous">
+    <origin xyz="0 0 ${testbed_wheel_z}" rpy="0 0 0"/>
+    <parent link="testbed_wheelLink_4"/>
+    <child link="testbed_wheel_4"/>
+  </joint>
+
+
+  <link name="framemount_1_link">
+  <xacro:box_inertia m="${frame_mount_1_m}" w="${frame_mount_1_w}" h="${frame_mount_1_h}" d="${frame_mount_1_d}"/>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${frame_mount_1_w} ${frame_mount_1_h} ${frame_mount_1_d}"/>
+    </geometry>
+  </visual>
+     </link>
+
+  <joint name="testbed_framemount_1_joint" type="fixed">
+    <origin xyz="${frame_mount_1_x + offset_x_duck1} ${frame_mount_1_y} ${frame_mount_1_z} " rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="framemount_1_link"/>
+  </joint>
+<!-->
+
+  <link name="framemount_robot_1_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="${frame_mount_robot_1_l}" radius="${frame_mount_robot_1_r}"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="${frame_mount_robot_1_l}" radius="${frame_mount_robot_1_r}"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertia m="0.1" r="${frame_mount_robot_1_r}" h="${frame_mount_robot_1_l}"/>
+  </link>
+
+  <joint name="testbed_framemount_robot_1_joint" type="continuous">
+    <origin xyz="0 0 ${frame_mount_robot_1_z}" rpy="0 0 0"/>
+    <parent link="framemount_1_link"/>
+    <child link="framemount_robot_1_link"/>
+  </joint>
+ <-->
+  <link name="duck1">
+  <xacro:cylinder_inertia m="2" r="0.2" h="0.076"/>
+    <visual>
+      <material name = "blue"/>
+      <origin xyz="0 0 0.038" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.076" radius="0.2"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.038" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.076" radius="0.2"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck1_joint" type="continuous">
+    <origin xyz="0 0 ${offset_z_duck} " rpy="0 0 0"/>
+     <axis xyz="0 0 1" rpy="0 0 0"/>
+    <parent link="framemount_1_link"/>
+    <child link="duck1"/>
+  </joint>
+
+  <link name="duck1_lidar">
+  <xacro:cylinder_inertia m="0.2" r="0.035" h="0.064"/>
+    <visual>
+      <material name = "blue"/>
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.064" radius="0.035"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.064" radius="0.035"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="duck1_castorsupport_1">
+  <xacro:cylinder_inertia m="0.2" r="0.025" h="0.012"/>
+    <visual>
+      <material name = "blue"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="caster1_joint" type="fixed">
+    <origin xyz="0.153 0 -0.006" rpy="0 0 0"/>
+    <parent link="duck1"/>
+    <child link="duck1_castorsupport_1"/>
+  </joint>
+
+  <link name="duck1_castorwheel_1">
+  <xacro:sphere_inertia m="0.5" r="0.025"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.02"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="casterwheel_1_joint" type="continuous">
+    <origin xyz="0 0 -0.006" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck1_castorsupport_1"/>
+    <child link="duck1_castorwheel_1"/>
+  </joint>
+
+  <link name="duck1_castorsupport_2">
+  <xacro:cylinder_inertia m="0.2" r="0.025" h="0.012"/>
+    <visual>
+      <material name = "blue"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck1_caster2_joint" type="fixed">
+    <origin xyz="-0.153 0 -0.006" rpy="0 0 0"/>
+    <parent link="duck1"/>
+    <child link="duck1_castorsupport_2"/>
+  </joint>
+
+  <link name="duck1_castorwheel_2">
+  <xacro:sphere_inertia m="0.5" r="2"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.02"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck1_casterwheel_2_joint" type="continuous">
+    <origin xyz="0 0 -0.006" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck1_castorsupport_2"/>
+    <child link="duck1_castorwheel_2"/>
+  </joint>
+  
+  
+  <link name="duck1_wheel1">
+    <xacro:cylinder_inertia m="0.1" r="0.042" h="0.02"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </collision>
+  </link>
+  
+  
+   <link name="duck1_wheel2">
+   <xacro:cylinder_inertia m="0.1" r="0.042" h="0.02"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck1_lidar_joint" type="fixed">
+    <origin xyz="0 0 0.076" rpy="0 0 0"/>
+    <parent link="duck1"/>
+    <child link="duck1_lidar"/>
+  </joint>
+  
+   <joint name="duck1_wheel1_joint" type="continuous">
+    <origin xyz="0 0.1885 0.01" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck1"/>
+    <child link="duck1_wheel1"/>
+  </joint>
+
+  <joint name="duck1_wheel2_joint" type="continuous">
+    <origin xyz="0 -0.1885 0.01" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck1"/>
+    <child link="duck1_wheel2"/>
+  </joint>
+
+
+  <link name="framemount_2_link">
+  <xacro:box_inertia m="${frame_mount_1_m}" w="${frame_mount_1_w}" h="${frame_mount_1_h}" d="${frame_mount_1_d}"/>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <box size="${frame_mount_1_w} ${frame_mount_1_h} ${frame_mount_1_d}"/>
+    </geometry>
+  </visual>
+     </link>
+
+  <joint name="testbed_framemount_2_joint" type="fixed">
+    <origin xyz="${-1*(frame_mount_1_x + offset_x_duck1)} ${frame_mount_1_y} ${frame_mount_1_z} " rpy="0 0 0"/>
+    <parent link="testBed"/>
+    <child link="framemount_2_link"/>
+  </joint>
+
+  <link name="duck2">
+  <xacro:cylinder_inertia m="2" r="0.2" h="0.076"/>
+    <visual>
+      <material name = "red"/>
+      <origin xyz="0 0 0.038" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.076" radius="0.2"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.038" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.076" radius="0.2"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck2_joint" type="continuous">
+    <origin xyz="0 0 ${offset_z_duck} " rpy="0 0 0"/>
+     <axis xyz="0 0 1" rpy="0 0 0"/>
+    <parent link="framemount_2_link"/>
+    <child link="duck2"/>
+  </joint>
+
+  <link name="duck2_lidar">
+  <xacro:cylinder_inertia m="0.2" r="0.035" h="0.064"/>
+    <visual>
+      <material name = "red"/>
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.064" radius="0.035"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.032" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.064" radius="0.035"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="duck2_castorsupport_1">
+  <xacro:cylinder_inertia m="0.2" r="0.025" h="0.012"/>
+    <visual>
+      <material name = "red"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="caster2_joint" type="fixed">
+    <origin xyz="0.153 0 -0.006" rpy="0 0 0"/>
+    <parent link="duck2"/>
+    <child link="duck2_castorsupport_1"/>
+  </joint>
+
+  <link name="duck2_castorwheel_1">
+  <xacro:sphere_inertia m="0.5" r="0.025"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.02"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck2_casterwheel_1_joint" type="continuous">
+    <origin xyz="0 0 -0.006" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck2_castorsupport_1"/>
+    <child link="duck2_castorwheel_1"/>
+  </joint>
+
+  <link name="duck2_castorsupport_2">
+  <xacro:cylinder_inertia m="0.2" r="0.025" h="0.012"/>
+    <visual>
+      <material name = "red"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck2_caster2_joint" type="fixed">
+    <origin xyz="-0.153 0 -0.006" rpy="0 0 0"/>
+    <parent link="duck2"/>
+    <child link="duck2_castorsupport_2"/>
+  </joint>
+
+  <link name="duck2_castorwheel_2">
+  <xacro:sphere_inertia m="0.5" r="2"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.02"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck2_casterwheel_2_joint" type="continuous">
+    <origin xyz="0 0 -0.006" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck2_castorsupport_2"/>
+    <child link="duck2_castorwheel_2"/>
+  </joint>
+  
+  
+  <link name="duck2_wheel1">
+    <xacro:cylinder_inertia m="0.1" r="0.042" h="0.02"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </collision>
+  </link>
+  
+  
+   <link name="duck2_wheel2">
+   <xacro:cylinder_inertia m="0.1" r="0.042" h="0.02"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder length="0.02" radius="0.041"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="duck2_lidar_joint" type="fixed">
+    <origin xyz="0 0 0.076" rpy="0 0 0"/>
+    <parent link="duck2"/>
+    <child link="duck2_lidar"/>
+  </joint>
+  
+   <joint name="duck2_wheel1_joint" type="continuous">
+    <origin xyz="0 0.1885 0.01" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck2"/>
+    <child link="duck2_wheel1"/>
+  </joint>
+
+  <joint name="duck2_wheel2_joint" type="continuous">
+    <origin xyz="0 -0.1885 0.01" rpy="0 0 0"/>
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="duck2"/>
+    <child link="duck2_wheel2"/>
+  </joint>
+
+
+  <gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <alwaysOn>false</alwaysOn>
+      <legacyMode>false</legacyMode>
+      <updateRate>20</updateRate>
+      <leftJoint>duck1_wheel1_joint</leftJoint>
+      <rightJoint>duck1_wheel2_joint</rightJoint>
+      <wheelSeparation>0.377</wheelSeparation>
+      <wheelDiameter>0.082</wheelDiameter>
+      <torque>20</torque>
+      <commandTopic>/cmd_vel/duck1</commandTopic>
+      <odometryTopic>/odomSim</odometryTopic>
+      <odometryFrame>odomSim</odometryFrame>
+      <robotBaseFrame>base_link</robotBaseFrame>
+      <!-->
+      <publishWheelTF>True</publishWheelTF>
+      <odometrySource>0</odometrySource><-->
+
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <alwaysOn>false</alwaysOn>
+      <legacyMode>false</legacyMode>
+      <updateRate>20</updateRate>
+      <leftJoint>duck2_wheel1_joint</leftJoint>
+      <rightJoint>duck2_wheel2_joint</rightJoint>
+      <wheelSeparation>0.377</wheelSeparation>
+      <wheelDiameter>0.082</wheelDiameter>
+      <torque>20</torque>
+      <commandTopic>/cmd_vel/duck2</commandTopic>
+      <odometryTopic>/odomSim</odometryTopic>
+      <odometryFrame>odomSim</odometryFrame>
+      <robotBaseFrame>base_link</robotBaseFrame>
+      
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="duck1">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="duck1_wheel1">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="duck1_wheel2">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="duck2">
+    <material>Gazebo/Green</material>
+  </gazebo>
+  <gazebo reference="duck2_wheel1">
+    <material>Gazebo/Green</material>
+  </gazebo>
+  <gazebo reference="duck2_wheel2">
+    <material>Gazebo/Green</material>
+  </gazebo>
+  <gazebo reference="testBed">
+    <material>Gazebo/WhiteGlow</material>
+  </gazebo>
+
+
+</robot>

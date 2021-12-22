@@ -1,0 +1,3 @@
+<launch>
+	<node name="tf_broadcaster" pkg="robot_setup_tf" type="broadcaster.py"></node>
+</launch>

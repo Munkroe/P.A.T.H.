@@ -1,0 +1,8 @@
+prefix=/home/kongen/visual_ws/install
+
+Name: path_visual
+Description: Description of path_visual
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

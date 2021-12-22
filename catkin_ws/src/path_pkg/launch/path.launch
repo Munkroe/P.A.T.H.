@@ -1,0 +1,11 @@
+<launch>
+
+   <node pkg="robot_setup_tf" type="plate_tf_broadcaster.py" name="plate_tf_broadcaster"></node>
+   
+   <node pkg="robot_odom_tf" type="motor_odom_orientation_tf.py" name="orient_motor_odometry"></node>
+
+  <!-- <node pkg="robot_setup_tf" type="imu_publisher.py" name="imu_publisher"></node> -->
+   
+   <include file="$(find rplidar_ros)/launch/rplidar.launch"></include>
+
+</launch>

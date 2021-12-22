@@ -1,0 +1,20 @@
+<launch>
+
+    <!-- Start a roscore, if none is running --> 
+   <master auto="start"/>
+
+    <!-- Run the global clock --> 
+   <node pkg="path_pkg" type="clock_pub.py" name="clock_publisher"></node>
+   
+    <!-- Run the map server -->
+   <node name="map_server" pkg="map_server" type="map_server" args="/home/kongen/catkin_ws/src/maps/FRB7_map.yaml"/>
+   
+    <!-- Start sensor fusion --> 
+   <include file="$(find robot_pose_ekf)/launch/robot_pose_ekf_test.launch"></include>
+   
+   <include file="$(find duck1_2dnav)/launch/move_base.launch"></include>
+   
+   
+       <!--<include file="$(find gmapping)/launch/slam_gmapping_pr2.launch"></include> -->  
+
+</launch>

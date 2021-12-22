@@ -1,0 +1,2 @@
+path_visual:visual_control
+-DCATKIN_DEVEL_PREFIX=/home/kongen/visual_ws/devel -DCMAKE_INSTALL_PREFIX=/home/kongen/visual_ws/install -G Unix Makefiles

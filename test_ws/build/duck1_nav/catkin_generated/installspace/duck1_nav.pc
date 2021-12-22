@@ -1,0 +1,8 @@
+prefix=/home/kongen/test_ws/install
+
+Name: duck1_nav
+Description: Description of duck1_nav
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

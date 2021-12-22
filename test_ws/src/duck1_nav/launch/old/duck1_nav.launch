@@ -1,0 +1,41 @@
+<launch>
+
+  <master auto="start"/>
+  
+  <node pkg="path_pkg" type="clock_pub.py" name="clock_publisher"></node>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser" args="-0.012 0 0.14 0 0 0 base_link laser 200"/>
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_imu" args="0.103 0 0.002 0 0 0 base_link imu 200"/>
+  
+  <arg name="map_file" default="/home/kongen/catkin_ws/src/maps/FRB7_map.yaml"/>
+  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" />
+  
+  <node pkg="imu_complementary_filter" type="complementary_filter_node" name="imu_filter_node_for_orientation"></node>
+  
+  <node pkg="robot_pose_ekf" type="robot_pose_ekf" name="robot_pose_ekf">
+    <remap from="imu_data" to="imu/data"/>
+    <param name="output_frame" value="odom"/>
+    <param name="base_footprint_frame" value="base_link"/>
+    <param name="freq" value="10.0"/>
+    <param name="sensor_timeout" value="1.0"/>
+    <param name="odom_used" value="true"/>
+    <param name="imu_used" value="true"/>
+    <param name="vo_used" value="false"/>
+    <param name="gps_used" value="false"/>
+    <param name="debug" value="false"/>
+    <param name="self_diagnose" value="false"/>
+  </node>
+  
+  
+  
+  <!--node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find duck1_nav)/param/costmap_common_params.yaml" command="load" /> 
+    <rosparam file="$(find duck1_nav)/param/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find duck1_nav)/param/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find duck1_nav)/param/base_local_planner_params.yaml" command="load" />
+  </node-->
+  
+  <!--include file="$(find amcl)/examples/amcl_diff.launch"/-->
+  
+
+</launch>
