@@ -195,9 +195,9 @@ int8_t IMU_HandleReceivedData() {
 
 	// Apply filter and append queues
 	// Accelerometer
-//	newAccel.x -= accel_cali_offset.x;
-//	newAccel.y -= accel_cali_offset.y;
-//	newAccel.z -= accel_cali_offset.z;
+	newAccel.x -= accel_cali_offset.x;
+	newAccel.y -= accel_cali_offset.y;
+	newAccel.z -= accel_cali_offset.z;
 
 	AppendQueue(&accelRawQueue, &newAccel);
 
@@ -208,9 +208,9 @@ int8_t IMU_HandleReceivedData() {
 	AppendQueue(&accelFiltQueue, &newAccel);
 
 	// Gyroscope
-//	newAngVel.x -= gyro_cali_offset.x;
-//	newAngVel.y -= gyro_cali_offset.y;
-//	newAngVel.z -= gyro_cali_offset.z;
+	newAngVel.x -= gyro_cali_offset.x;
+	newAngVel.y -= gyro_cali_offset.y;
+	newAngVel.z -= gyro_cali_offset.z;
 
 	AppendQueue(&gyroRawQueue, &newAngVel);
 
