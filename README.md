@@ -19,10 +19,17 @@ The files inside the project is as follows:
 - **microsecond_counter**: Used for measuring execution time with microsecond precision.
 
 ## catkin_ws
-Mangler skriv
+This is the ROS workspace with all relevant files for the Raspberry Pi 4, the computer on the robots.
+Relevant files:
+- **catkin_ws/src/path_pkg/launch/path.launch**: Launch file that launches all functionalities at once. This includes the LiDAR, the odometry system and some transformations.
+- **catkin_ws/src/robot_odom_tf/scripts/motor_odom_orientation_tf.py**: Script that publishes the odometry data from the STM32.
+- **catkin_ws/src/robot_setup_tf/scripts/plate_tf_broadcaster**: Script that broadcasts the tranform between the two plates of the robot. 
 
 ## test_ws
-Mangler skriv
+This is the ROS workspace on the master device, the Toshiba laptop.
+Relevant files:
+- **test_ws/src/duck1_nav/launch/navigation.launch**: Launch file that launches all functionalities of the master device. This includes localization and navigation.
+- **test_ws/src/maps/FRB7_map.pgm**: Binary file of the map, the robots navigate within.
 
 ## visual_ws
 This ROS workspace is used for simulating bed movement using two robots.
