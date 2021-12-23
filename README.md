@@ -44,10 +44,7 @@ Relevant files:
 
 A few ROS packages have been removed from the source code due to upload problems. The following packages have been removed:
 
- - catkin_ws/src/openslam_gmapping/
- - catkin_ws/src/robot_pose_ekf/
  - catkin_ws/src/rplidar_ros/
- - catkin_ws/src/slam_gmapping/
  - test_ws/src/navigation/
  - test_ws/src/robot_localization/
 
